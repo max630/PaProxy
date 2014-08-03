@@ -1,3 +1,5 @@
-bin_LIBRARIES = pulse
+lib_LTLIBRARIES = libpulse.la
 
-src_SOURCES = xmalloc.c
+libpulse_la_SOURCES = xmalloc.c
+
+ACLOCAL_AMFLAGS = -I m4
