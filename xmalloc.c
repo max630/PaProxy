@@ -23,17 +23,14 @@
 #include <config.h>
 #endif
 
+#include "xmalloc.h"
+
 #include <stdlib.h>
+#include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-
-#include <pulse/gccmacro.h>
-#include <pulsecore/core-util.h>
-#include <pulsecore/macro.h>
-
-#include "xmalloc.h"
 
 /* Make sure not to allocate more than this much memory. */
 #define MAX_ALLOC_SIZE (1024*1024*96) /* 96MB */
