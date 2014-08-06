@@ -2,16 +2,25 @@
 module MakeDefault where
 
 import Control.Applicative ((<$>))
-import Control.Exception
-import Data.List
+import Control.Exception (bracket)
 import Language.C (parseCFile)
-import Language.C.Syntax.AST
+import Language.C.Syntax.AST (CDeclarator(..),
+                              CTranslationUnit(CTranslUnit),
+                              CExternalDeclaration(CDeclExt),
+                              CDerivedDeclarator(CFunDeclr),
+                              CDeclaration(CDecl))
 import Language.C.System.GCC (newGCC)
 import Language.C.Data.Node (NodeInfo)
-import Language.C.Data.Ident
-import System.Directory
-import System.Environment
-import System.IO
+import Language.C.Data.Ident (Ident(Ident))
+import System.Directory (removeFile, getTemporaryDirectory)
+import System.IO (openBinaryTempFile, hPutStrLn, hClose)
+
+-- TODO:
+-- * scan whole pulse directory
+-- * make default implementation
+--  * return type: int, char*, api*
+-- * make it skip existing functions
+-- * check linkage, add more exports if necessary
 
 main = do
   functions <- concat <$> mapM getFunctions ["mainloop-api.h", "error.h"]
