@@ -30,9 +30,18 @@ main = do
   where
     d_name (CDecl _ [(Just (CDeclr (Just (Ident name _ _)) _ _ _ _), _, _)] _) = name
     printFun (CDecl spec1@[CTypeSpec (CIntType _)]
-                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[(CFunDeclr _ _ _)] _ _ _), Nothing, Nothing)]
+                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[CFunDeclr _ _ _] _ _ _), Nothing, Nothing)]
                               _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_INT" (unNode spec1) (unNode spec2)
-    printFun _ = return ()
+    printFun (CDecl spec1@[CTypeSpec (CCharType _)]
+                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[CFunDeclr _ _ _, CPtrDeclr _ _] _ _ _), Nothing, Nothing)]
+                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_NEW_PCHAR" (unNode spec1) (unNode spec2)
+    printFun (CDecl spec1@[CTypeSpec (CTypeDef (Ident "size_t" _ _) _)]
+                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[CFunDeclr _ _ _] _ _ _), Nothing, Nothing)]
+                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_SIZE_T" (unNode spec1) (unNode spec2)
+    printFun (CDecl spec1@[CTypeSpec (CTypeDef (Ident "pa_usec_t" _ _) _)]
+                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[CFunDeclr _ _ _] _ _ _), Nothing, Nothing)]
+                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_PA_USEC_T" (unNode spec1) (unNode spec2)
+    printFun decl = fail ("Unrecognized: " ++ show (pretty decl) ++ "\n" ++ show (fmap (const ()) decl))
     unNode v = map (fmap (const ())) v
 
 getFunctions :: String -> IO [CDeclaration NodeInfo]
