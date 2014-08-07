@@ -3,6 +3,7 @@ module MakeDefault where
 
 import Control.Applicative ((<$>))
 import Control.Exception (bracket)
+import Data.List (nubBy, sortBy)
 import Language.C (parseCFile)
 import Language.C.Syntax.AST (CDeclarator(..),
                               CTranslationUnit(CTranslUnit),
@@ -12,19 +13,22 @@ import Language.C.Syntax.AST (CDeclarator(..),
 import Language.C.System.GCC (newGCC)
 import Language.C.Data.Node (NodeInfo)
 import Language.C.Data.Ident (Ident(Ident))
-import System.Directory (removeFile, getTemporaryDirectory)
+import System.Directory (removeFile, getDirectoryContents, getTemporaryDirectory)
 import System.IO (openBinaryTempFile, hPutStrLn, hClose)
 
 -- TODO:
--- * scan whole pulse directory
+-- + scan whole pulse directory
 -- * make default implementation
 --  * return type: int, char*, api*
 -- * make it skip existing functions
 -- * check linkage, add more exports if necessary
 
 main = do
-  functions <- concat <$> mapM getFunctions ["mainloop-api.h", "error.h"]
-  mapM_ (\(CDeclr (Just name) _ _ _ _) -> print name) functions
+  includes <- filter (`notElem` [".", ".."]) <$> getDirectoryContents "/usr/include/pulse"
+  functions <- nubBy (\d1 d2 -> d_name d1 == d_name d2) . sortBy (\d1 d2 -> d_name d1 `compare` d_name d2) . concat <$> mapM getFunctions includes
+  mapM_ (\d -> putStrLn (d_name d)) functions
+  where
+    d_name (CDeclr (Just (Ident name _ _)) _ _ _ _) = name
 
 getFunctions :: String -> IO [CDeclarator NodeInfo]
 getFunctions file = do
@@ -33,7 +37,7 @@ getFunctions file = do
     (createTmpSource tempDir file)
     removeFile
     (\tmpSource -> do
-      Right (CTranslUnit decls _) <- parseCFile (newGCC "gcc") Nothing ["-I/usr/include/pulse"] tmpSource
+      Right (CTranslUnit decls _) <- parseCFile (newGCC "gcc") Nothing ["-I/usr/include/pulse", "-I/usr/include/glib-2.0", "-I/usr/lib/i386-linux-gnu/glib-2.0/include"] tmpSource
       return [ decl | (CDeclExt (CDecl _ [(Just decl@(CDeclr (Just (Ident name _ _)) (CFunDeclr _ _ _ : _) _ _ _), Nothing, Nothing)] _)) <- decls, case name of { ('p' : 'a' : '_' : _) -> True; _ -> False } ])
 
 createTmpSource :: String -> String -> IO String
