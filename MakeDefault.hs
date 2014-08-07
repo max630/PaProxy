@@ -29,10 +29,11 @@ main = do
   mapM_ printFun functions
   where
     d_name (CDecl _ [(Just (CDeclr (Just (Ident name _ _)) _ _ _ _), _, _)] _) = name
-    printFun (CDecl [CStorageSpec (CExtern _), CTypeSpec (CIntType _)]
-                              [(Just (CDeclr (Just (Ident name _ _)) [CFunDeclr args _ _] _ _ _), Nothing, Nothing)]
-                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_INT"
+    printFun (CDecl spec1@[CTypeSpec (CIntType _)]
+                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[(CFunDeclr _ _ _)] _ _ _), Nothing, Nothing)]
+                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_INT" (unNode spec1) (unNode spec2)
     printFun _ = return ()
+    unNode v = map (fmap (const ())) v
 
 getFunctions :: String -> IO [CDeclaration NodeInfo]
 getFunctions file = do
@@ -62,9 +63,9 @@ tryFun = CTranslUnit [CFDefExt (CFunDef [CTypeSpec (CIntType ())]
                                                    ())
                                         ())] ()
 
-tryFun2 funName macroName =
-  fmap (const undefNode) (CFunDef [CTypeSpec (CIntType ())]
-                                  (CDeclr (Just $ internalIdent funName) [CFunDeclr (Right ([],False)) [] ()] Nothing [] ())
+tryFun2 funName macroName spec1 spec2 =
+  fmap (const undefNode) (CFunDef spec1
+                                  (CDeclr (Just $ internalIdent funName) spec2 Nothing [] ())
                                   []
                                   (CCompound [] [CBlockStmt (CExpr (Just (CCall (CVar (internalIdent macroName) ()) [] ())) ())] ())
                                   ())
