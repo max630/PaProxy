@@ -9,7 +9,8 @@ import Language.C (parseCFile)
 import Language.C.Syntax.AST
 import Language.C.System.GCC (newGCC)
 import Language.C.Data.Node (NodeInfo, undefNode)
-import Language.C.Data.Ident (Ident(Ident))
+import Language.C.Data.Ident (Ident(Ident), internalIdent)
+import Language.C.Pretty
 import System.Directory (removeFile, getDirectoryContents, getTemporaryDirectory)
 import System.IO (openBinaryTempFile, hPutStrLn, hClose)
 
@@ -23,14 +24,17 @@ import System.IO (openBinaryTempFile, hPutStrLn, hClose)
 data ReturnType = RTInt | RTPChar deriving (Eq, Ord, Show)
 
 main = do
-  tuDecls <$> (fromEitherM =<< parseCFile (newGCC "gcc") Nothing [] "default-templates.tc")
   includes <- filter (`notElem` [".", ".."]) <$> getDirectoryContents "/usr/include/pulse"
   functions <- nubBy (\d1 d2 -> d_name d1 == d_name d2) . sortBy (\d1 d2 -> d_name d1 `compare` d_name d2) . concat <$> mapM getFunctions includes
-  mapM_ (\d -> putStrLn (d_name d)) functions
+  mapM_ printFun functions
   where
-    d_name (CDeclr (Just (Ident name _ _)) _ _ _ _) = name
+    d_name (CDecl _ [(Just (CDeclr (Just (Ident name _ _)) _ _ _ _), _, _)] _) = name
+    printFun (CDecl [CStorageSpec (CExtern _), CTypeSpec (CIntType _)]
+                              [(Just (CDeclr (Just (Ident name _ _)) [CFunDeclr args _ _] _ _ _), Nothing, Nothing)]
+                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_INT"
+    printFun _ = return ()
 
-getFunctions :: String -> IO [CDeclarator NodeInfo]
+getFunctions :: String -> IO [CDeclaration NodeInfo]
 getFunctions file = do
   tempDir <- getTemporaryDirectory
   bracket
@@ -38,7 +42,7 @@ getFunctions file = do
     removeFile
     (\tmpSource -> do
       Right (CTranslUnit decls _) <- parseCFile (newGCC "gcc") Nothing ["-I/usr/include/pulse", "-I/usr/include/glib-2.0", "-I/usr/lib/i386-linux-gnu/glib-2.0/include"] tmpSource
-      return [ decl | (CDeclExt (CDecl _ [(Just decl@(CDeclr (Just (Ident name _ _)) (CFunDeclr _ _ _ : _) _ _ _), Nothing, Nothing)] _)) <- decls, case name of { ('p' : 'a' : '_' : _) -> True; _ -> False } ])
+      return [ decl | (CDeclExt decl@(CDecl _ [(Just (CDeclr (Just (Ident name _ _)) (CFunDeclr _ _ _ : _) _ _ _), Nothing, Nothing)] _)) <- decls, case name of { ('p' : 'a' : '_' : _) -> True; _ -> False } ])
 
 tuDecls (CTranslUnit decls _) = decls
 
@@ -58,8 +62,17 @@ tryFun = CTranslUnit [CFDefExt (CFunDef [CTypeSpec (CIntType ())]
                                                    ())
                                         ())] ()
 
+tryFun2 funName macroName =
+  fmap (const undefNode) (CFunDef [CTypeSpec (CIntType ())]
+                                  (CDeclr (Just $ internalIdent funName) [CFunDeclr (Right ([],False)) [] ()] Nothing [] ())
+                                  []
+                                  (CCompound [] [CBlockStmt (CExpr (Just (CCall (CVar (internalIdent macroName) ()) [] ())) ())] ())
+                                  ())
+
 fromEitherM (Right r) = return r
 fromEitherM (Left e) = fail (show e)
+
+
 
 deriving instance Eq a => Eq (CArraySize a)
 deriving instance Eq a => Eq (CAssemblyOperand a)
@@ -129,5 +142,12 @@ CTranslUnit [CFDefExt (CFunDef [CTypeSpec (CIntType ())]
                                     ())
                          ()),
        CFDefExt (CFunDef [CTypeSpec (CCharType ())] (CDeclr (Just "foo_pchar") [CFunDeclr (Right ([],False)) [] (),CPtrDeclr [] ()] Nothing [] ()) [] (CCompound [] [CBlockStmt (CReturn (Just (CConst (CIntConst 0 ()))) ())] ()) ())] ()
+
+CTranslUnit [CFDefExt (CFunDef [CTypeSpec (CIntType ())]
+                               (CDeclr (Just "foo") [CFunDeclr (Right ([],False)) [] ()] Nothing [] ())
+                               []
+                               (CCompound [] [CBlockStmt (CExpr (Just (CCall (CVar "FOO_AAA" ()) [] ())) ())] ())
+                               ())]
+            ()
 
  -}
