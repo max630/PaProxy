@@ -1,9 +1,0 @@
-int foo_int()
-{
-    return -PA_ERR_NOTIMPLEMENTED;
-}
-
-char* foo_pchar()
-{
-    return 0;
-}
