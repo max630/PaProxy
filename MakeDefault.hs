@@ -4,7 +4,7 @@ module MakeDefault where
 
 import Control.Applicative ((<$>))
 import Control.Exception (bracket)
-import Data.List (nubBy, sortBy, isPrefixOf)
+import Data.List (nubBy, sortBy, isPrefixOf, isSuffixOf)
 import Language.C (parseCFile)
 import Language.C.Syntax.AST
 import Language.C.System.GCC (newGCC)
@@ -13,18 +13,17 @@ import Language.C.Data.Ident (Ident(Ident), internalIdent)
 import Language.C.Pretty
 import System.Directory (removeFile, getDirectoryContents, getTemporaryDirectory)
 import System.IO (openBinaryTempFile, hPutStrLn, hClose)
+import GHC.Exts (sortWith)
 
 -- TODO:
 -- + scan whole pulse directory
--- * make default implementation
---  * return type: int, char*, api*
+-- + make default implementation
 -- * make it skip existing functions
 -- * check linkage, add more exports if necessary
 
 data ReturnType = RTInt | RTPChar deriving (Eq, Ord, Show)
 
-main = do
-  getIncludeFunctions >>= mapM_ printFun
+main = getIncludeFunctions >>= mapM_ printFun
   where
     printFun decl@(CDecl spec1 [(Just (CDeclr (Just (Ident name _ _)) spec2 _ _ _), Nothing, Nothing)] _) = do
       implName <- case (spec1, spec2) of
@@ -60,7 +59,7 @@ main = do
 
 getIncludeFunctions = do
   includes <- filter (`notElem` [".", ".."]) <$> getDirectoryContents "/usr/include/pulse"
-  nubBy (\d1 d2 -> declName d1 == declName d2) . sortBy (\d1 d2 -> declName d1 `compare` declName d2) . concat <$> mapM getFunctions includes
+  nubWith declName . sortWith declName . concat <$> mapM getFunctions includes
 
 declName (CDecl _ [(Just (CDeclr (Just (Ident name _ _)) _ _ _ _), _, _)] _) = name
 
@@ -126,6 +125,8 @@ deriving instance Eq a => Eq (CStringLiteral a)
 deriving instance Eq a => Eq (CStructureUnion a)
 deriving instance Eq a => Eq (CTypeQualifier a)
 deriving instance Eq a => Eq (CTypeSpecifier a)
+
+nubWith f l = nubBy (\v1 v2 -> f v1 == f v2) l
 
 {-
 
