@@ -4,7 +4,7 @@ module MakeDefault where
 
 import Control.Applicative ((<$>))
 import Control.Exception (bracket)
-import Data.List (nubBy, sortBy)
+import Data.List (nubBy, sortBy, isPrefixOf)
 import Language.C (parseCFile)
 import Language.C.Syntax.AST
 import Language.C.System.GCC (newGCC)
@@ -24,22 +24,45 @@ import System.IO (openBinaryTempFile, hPutStrLn, hClose)
 data ReturnType = RTInt | RTPChar deriving (Eq, Ord, Show)
 
 main = do
-  includes <- filter (`notElem` [".", ".."]) <$> getDirectoryContents "/usr/include/pulse"
-  functions <- nubBy (\d1 d2 -> d_name d1 == d_name d2) . sortBy (\d1 d2 -> d_name d1 `compare` d_name d2) . concat <$> mapM getFunctions includes
-  mapM_ printFun functions
+  getIncludeFunctions >>= mapM_ printFun
   where
-    d_name (CDecl _ [(Just (CDeclr (Just (Ident name _ _)) _ _ _ _), _, _)] _) = name
     printFun decl@(CDecl spec1 [(Just (CDeclr (Just (Ident name _ _)) spec2 _ _ _), Nothing, Nothing)] _) = do
       implName <- case (spec1, spec2) of
-          ([CTypeSpec (CIntType _)], [CFunDeclr _ _ _]) -> return "DEFAULT_INT"
-          ([CTypeSpec (CTypeDef (Ident "size_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_INT"
-          ([CTypeSpec (CTypeDef (Ident "pa_usec_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_SIZE_T"
-          ([CTypeSpec (CCharType _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) -> return "DEFAULT_NEW_PCHAR"
+          ([CTypeSpec (CVoidType _)], [CFunDeclr _ _ _]) -> return "DEFAULT_VOID"
+          ([CTypeSpec (CIntType _)], [CFunDeclr _ _ _]) -> return "DEFAULT_ZERO"
+          ([CTypeSpec (CUnsigType _)], [CFunDeclr _ _ _]) -> return "DEFAULT_ZERO"
+          ([CTypeSpec (CFloatType _)], [CFunDeclr _ _ _]) -> return "DEFAULT_ZERO"
+          ([CTypeSpec (CDoubleType _)], [CFunDeclr _ _ _]) -> return "DEFAULT_ZERO"
+          ([CTypeSpec (CTypeDef (Ident "uint32_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_ZERO"
+          ([CTypeSpec (CTypeDef (Ident "int64_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_ZERO"
+          ([CTypeSpec (CTypeDef (Ident "size_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_ZERO"
+          ([CTypeSpec (CTypeDef (Ident "pa_usec_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_ZERO"
+          ([CTypeSpec (CTypeDef (Ident "pa_channel_position_mask_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_CHANNEL_POSITION_MASK"
+          ([CTypeSpec (CTypeDef (Ident "pa_channel_position_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_CHANNEL_POSITION"
+          ([CTypeSpec (CTypeDef (Ident "pa_context_state_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_CONTEXT_STATE"
+          ([CTypeSpec (CTypeDef (Ident "pa_volume_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_VOLUME"
+          ([CTypeSpec (CTypeDef (Ident "pa_encoding_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_ENCODING"
+          ([CTypeSpec (CTypeDef (Ident "pa_prop_type_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_PROP_TYPE"
+          ([CTypeSpec (CTypeDef (Ident "pa_operation_state_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_OPERATION_STATE"
+          ([CTypeSpec (CTypeDef (Ident "pa_sample_format_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_SAMPLE_FORMAT"
+          ([CTypeSpec (CTypeDef (Ident "pa_stream_state_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_STREAM_STATE"
+          ([CTypeSpec (CVoidType _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) -> return "DEFAULT_NULL"
+          ([CTypeSpec (CCharType _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) -> return "DEFAULT_NULL"
+          ([CTypeQual (CConstQual _), CTypeSpec (CCharType _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) -> return "DEFAULT_NULL"
+          ([CTypeSpec (CTypeDef (Ident paTypeName _ _) _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) | "pa_" `isPrefixOf` paTypeName -> return "DEFAULT_NULL"
+          ([CTypeQual (CConstQual _), CTypeSpec (CTypeDef (Ident paTypeName _ _) _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) | "pa_" `isPrefixOf` paTypeName -> return "DEFAULT_NULL"
+          ([CTypeSpec (CSUType (CStruct CStructTag (Just (Ident "timeval" _ _)) _ _ _) _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) -> return "DEFAULT_NULL"
           _ -> fail ("Unrecognized: " ++ show (pretty decl) ++ "\n" ++ show (fmap (const ()) decl))
       putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name implName spec1u spec2u
       where
         spec1u = map (fmap (const ())) spec1
         spec2u = map (fmap (const ())) spec2
+
+getIncludeFunctions = do
+  includes <- filter (`notElem` [".", ".."]) <$> getDirectoryContents "/usr/include/pulse"
+  nubBy (\d1 d2 -> declName d1 == declName d2) . sortBy (\d1 d2 -> declName d1 `compare` declName d2) . concat <$> mapM getFunctions includes
+
+declName (CDecl _ [(Just (CDeclr (Just (Ident name _ _)) _ _ _ _), _, _)] _) = name
 
 getFunctions :: String -> IO [CDeclaration NodeInfo]
 getFunctions file = do
@@ -49,7 +72,8 @@ getFunctions file = do
     removeFile
     (\tmpSource -> do
       Right (CTranslUnit decls _) <- parseCFile (newGCC "gcc") Nothing ["-I/usr/include/pulse", "-I/usr/include/glib-2.0", "-I/usr/lib/i386-linux-gnu/glib-2.0/include"] tmpSource
-      return [ decl | (CDeclExt decl@(CDecl _ [(Just (CDeclr (Just (Ident name _ _)) (CFunDeclr _ _ _ : _) _ _ _), Nothing, Nothing)] _)) <- decls, case name of { ('p' : 'a' : '_' : _) -> True; _ -> False } ])
+      return [ decl | (CDeclExt decl@(CDecl _ [(Just (CDeclr (Just (Ident name _ _)) (CFunDeclr _ _ _ : _) _ _ _), Nothing, Nothing)] _)) <- decls,
+                      "pa_" `isPrefixOf` name && not ("pa_simple_" `isPrefixOf` name) ])
 
 tuDecls (CTranslUnit decls _) = decls
 
