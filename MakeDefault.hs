@@ -1,16 +1,28 @@
 #!/usr/bin/runghc
-{-# LANGUAGE StandaloneDeriving #-}
-module MakeDefault where
+module MakeDefault(main) where
 
 import Control.Applicative ((<$>))
 import Control.Exception (bracket)
-import Data.List (nubBy, sortBy, isPrefixOf, isSuffixOf)
+import Data.List (nubBy, isPrefixOf)
 import Language.C (parseCFile)
-import Language.C.Syntax.AST
+import Language.C.Syntax.AST (CTypeSpecifier(CCharType, CDoubleType, CFloatType, CIntType, CSUType, CTypeDef, CUnsigType, CVoidType),
+                              CTypeQualifier(CConstQual),
+                              CTranslationUnit(CTranslUnit),
+                              CStructureUnion(CStruct),
+                              CStructTag(CStructTag),
+                              CStatement(CCompound, CExpr),
+                              CFunctionDef(CFunDef),
+                              CExternalDeclaration(CDeclExt),
+                              CExpression(CCall, CVar),
+                              CDerivedDeclarator(CFunDeclr, CPtrDeclr),
+                              CDeclarator(CDeclr),
+                              CDeclarationSpecifier(CTypeQual, CTypeSpec),
+                              CDeclaration(..),
+                              CCompoundBlockItem(CBlockStmt))
 import Language.C.System.GCC (newGCC)
 import Language.C.Data.Node (NodeInfo, undefNode)
 import Language.C.Data.Ident (Ident(Ident), internalIdent)
-import Language.C.Pretty
+import Language.C.Pretty (Pretty(pretty))
 import System.Directory (removeFile, getDirectoryContents, getTemporaryDirectory)
 import System.IO (openBinaryTempFile, hPutStrLn, hClose)
 import GHC.Exts (sortWith)
@@ -84,14 +96,6 @@ createTmpSource tempDir file = do
   hClose handle
   return path
 
-tryFun = CTranslUnit [CFDefExt (CFunDef [CTypeSpec (CIntType ())]
-                                        (CDeclr (Just $ Ident "foo_int" 1 undefNode) [CFunDeclr (Right ([],False)) [] ()] Nothing [] ())
-                                        []
-                                        (CCompound []
-                                                   [CBlockStmt (CReturn (Just (CUnary CMinOp (CVar (Ident "PA_ERR_NOTIMPLEMENTED" 2 undefNode) ()) ())) ())]
-                                                   ())
-                                        ())] ()
-
 tryFun2 funName macroName spec1 spec2 =
   fmap (const undefNode) (CFunDef spec1
                                   (CDeclr (Just $ internalIdent funName) spec2 Nothing [] ())
@@ -101,30 +105,6 @@ tryFun2 funName macroName spec1 spec2 =
 
 fromEitherM (Right r) = return r
 fromEitherM (Left e) = fail (show e)
-
-
-
-deriving instance Eq a => Eq (CArraySize a)
-deriving instance Eq a => Eq (CAssemblyOperand a)
-deriving instance Eq a => Eq (CAssemblyStatement a)
-deriving instance Eq a => Eq (CAttribute a)
-deriving instance Eq a => Eq (CBuiltinThing a)
-deriving instance Eq a => Eq (CCompoundBlockItem a)
-deriving instance Eq a => Eq (CConstant a)
-deriving instance Eq a => Eq (CDeclaration a)
-deriving instance Eq a => Eq (CDeclarationSpecifier a)
-deriving instance Eq a => Eq (CDeclarator a)
-deriving instance Eq a => Eq (CDerivedDeclarator a)
-deriving instance Eq a => Eq (CEnumeration a)
-deriving instance Eq a => Eq (CExpression a)
-deriving instance Eq a => Eq (CFunctionDef a)
-deriving instance Eq a => Eq (CInitializer a)
-deriving instance Eq a => Eq (CPartDesignator a)
-deriving instance Eq a => Eq (CStatement a)
-deriving instance Eq a => Eq (CStringLiteral a)
-deriving instance Eq a => Eq (CStructureUnion a)
-deriving instance Eq a => Eq (CTypeQualifier a)
-deriving instance Eq a => Eq (CTypeSpecifier a)
 
 nubWith f l = nubBy (\v1 v2 -> f v1 == f v2) l
 
