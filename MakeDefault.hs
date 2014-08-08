@@ -29,20 +29,17 @@ main = do
   mapM_ printFun functions
   where
     d_name (CDecl _ [(Just (CDeclr (Just (Ident name _ _)) _ _ _ _), _, _)] _) = name
-    printFun (CDecl spec1@[CTypeSpec (CIntType _)]
-                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[CFunDeclr _ _ _] _ _ _), Nothing, Nothing)]
-                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_INT" (unNode spec1) (unNode spec2)
-    printFun (CDecl spec1@[CTypeSpec (CCharType _)]
-                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[CFunDeclr _ _ _, CPtrDeclr _ _] _ _ _), Nothing, Nothing)]
-                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_NEW_PCHAR" (unNode spec1) (unNode spec2)
-    printFun (CDecl spec1@[CTypeSpec (CTypeDef (Ident "size_t" _ _) _)]
-                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[CFunDeclr _ _ _] _ _ _), Nothing, Nothing)]
-                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_SIZE_T" (unNode spec1) (unNode spec2)
-    printFun (CDecl spec1@[CTypeSpec (CTypeDef (Ident "pa_usec_t" _ _) _)]
-                              [(Just (CDeclr (Just (Ident name _ _)) spec2@[CFunDeclr _ _ _] _ _ _), Nothing, Nothing)]
-                              _) = putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name "DEFAULT_PA_USEC_T" (unNode spec1) (unNode spec2)
-    printFun decl = fail ("Unrecognized: " ++ show (pretty decl) ++ "\n" ++ show (fmap (const ()) decl))
-    unNode v = map (fmap (const ())) v
+    printFun decl@(CDecl spec1 [(Just (CDeclr (Just (Ident name _ _)) spec2 _ _ _), Nothing, Nothing)] _) = do
+      implName <- case (spec1, spec2) of
+          ([CTypeSpec (CIntType _)], [CFunDeclr _ _ _]) -> return "DEFAULT_INT"
+          ([CTypeSpec (CTypeDef (Ident "size_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_INT"
+          ([CTypeSpec (CTypeDef (Ident "pa_usec_t" _ _) _)], [CFunDeclr _ _ _]) -> return "DEFAULT_SIZE_T"
+          ([CTypeSpec (CCharType _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) -> return "DEFAULT_NEW_PCHAR"
+          _ -> fail ("Unrecognized: " ++ show (pretty decl) ++ "\n" ++ show (fmap (const ()) decl))
+      putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name implName spec1u spec2u
+      where
+        spec1u = map (fmap (const ())) spec1
+        spec2u = map (fmap (const ())) spec2
 
 getFunctions :: String -> IO [CDeclaration NodeInfo]
 getFunctions file = do
