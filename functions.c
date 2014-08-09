@@ -1,26 +1,5 @@
 
-pa_xfree
-pa_xmalloc
-pa_xmalloc0
-pa_xmemdup
-pa_xrealloc
-pa_xstrdup
-pa_xstrndup
-
-char *pa_ascii_filter(const char *str)
-{
-}
-
 /*
-pa_xfree
-pa_xmalloc
-pa_xmalloc0
-pa_xmemdup
-pa_xrealloc
-pa_xstrdup
-pa_xstrndup
-
-
 pa_ascii_filter
 pa_ascii_valid
 pa_bytes_per_second
@@ -369,5 +348,12 @@ pa_utf8_filter
 pa_utf8_to_locale
 pa_utf8_valid
 pa_volume_snprint
+pa_xfree
+pa_xmalloc
+pa_xmalloc0
+pa_xmemdup
+pa_xrealloc
+pa_xstrdup
+pa_xstrndup
 PULSE_0
 */

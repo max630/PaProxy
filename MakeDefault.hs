@@ -28,15 +28,34 @@ import System.Directory (removeFile, getDirectoryContents, getTemporaryDirectory
 import System.IO (openBinaryTempFile, hPutStrLn, hClose)
 import GHC.Exts (sortWith)
 
+import qualified Data.Set as S
+
 -- TODO:
 -- + scan whole pulse directory
 -- + make default implementation
--- * make it skip existing functions
+-- + make it skip existing functions
+-- + prepare compilable output
 -- * check linkage, add more exports if necessary
+-- * implement applications minimum
+--   * simple loop
+--   * real sound stuff
+--   * threaded loop
+--   * paplay
+--   * skype
+--   * parecord
+-- * alsa output
+-- * packaging
+--   * side libs - simple, glib
+--   * debian
+--   * others (expect contribs)
 
 data ReturnType = RTInt | RTPChar deriving (Eq, Ord, Show)
 
-main = getIncludeFunctions >>= mapM_ printFun
+main = do
+  definedFunctions <- S.fromList <$> getDefinedFunctions
+  (includeFunctions, includes) <- processIncludes
+  printHeader includes
+  mapM_ printFun $ filter (not . (`S.member` definedFunctions) . declName) includeFunctions
   where
     printFun decl@(CDecl spec1 [(Just (CDeclr (Just (Ident name _ _)) spec2 _ _ _), Nothing, Nothing)] _) = do
       implName <- case (spec1, spec2) of
@@ -70,13 +89,19 @@ main = getIncludeFunctions >>= mapM_ printFun
         spec1u = map (fmap (const ())) spec1
         spec2u = map (fmap (const ())) spec2
 
+printHeader includes = do
+  mapM_ (\inc -> putStrLn ("#include <" ++ inc ++ ">")) includes
+  putStrLn ""
+  putStrLn "#include \"default_macros.h\""
+  putStrLn ""
+
 getDefinedFunctions = do
   sources <- filter (\fn -> isSuffixOf ".c" fn && fn /= "defaults.c") <$> getDirectoryContents "."
   concatMap (mapMaybe declMbFunName) <$> mapM readCFile sources
 
-getIncludeFunctions = do
-  includes <- filter (`notElem` [".", ".."]) <$> getDirectoryContents "/usr/include/pulse"
-  nubWith declName . sortWith declName . concat <$> mapM getFunctions includes
+processIncludes = do
+  includes <- filter (`notElem` [".", "..", "glib-mainloop.h"]) <$> getDirectoryContents "/usr/include/pulse"
+  (flip (,) includes) <$> nubWith declName . sortWith declName . concat <$> mapM getFunctions includes
 
 declName (CDecl _ [(Just (CDeclr (Just (Ident name _ _)) _ _ _ _), _, _)] _) = name
 
@@ -98,6 +123,7 @@ readCFile src = do
 tuDecls (CTranslUnit decls _) = decls
 
 declMbFunName (CFDefExt (CFunDef _ (CDeclr (Just (Ident name _ _)) _ _ _ _) _ _ _)) = Just name
+declMbFunName _ = Nothing
 
 createTmpSource :: String -> String -> IO String
 createTmpSource tempDir file = do

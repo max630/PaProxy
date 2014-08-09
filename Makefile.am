@@ -1,6 +1,7 @@
 lib_LTLIBRARIES = libpulse.la
 
-libpulse_la_SOURCES = xmalloc.c
+libpulse_la_SOURCES = xmalloc.c defaults.c defaults-specials.c
 
 ACLOCAL_AMFLAGS = -I m4
+
 AM_CPPFLAGS = -I/usr/include/pulse
