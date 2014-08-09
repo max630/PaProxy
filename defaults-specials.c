@@ -14,5 +14,5 @@ pa_operation * pa_context_add_autoload(pa_context * c,
                                        pa_context_index_cb_t cb,
                                        void * userdata)
 {
-    DEFAULT_NULL();
+    PAP_DEFAULT_NULL();
 }
