@@ -3,7 +3,8 @@ module MakeDefault(main) where
 
 import Control.Applicative ((<$>))
 import Control.Exception (bracket)
-import Data.List (nubBy, isPrefixOf)
+import Data.List (nubBy, isPrefixOf, isSuffixOf)
+import Data.Maybe (mapMaybe)
 import Language.C (parseCFile)
 import Language.C.Syntax.AST (CTypeSpecifier(CCharType, CDoubleType, CFloatType, CIntType, CSUType, CTypeDef, CUnsigType, CVoidType),
                               CTypeQualifier(CConstQual),
@@ -12,7 +13,7 @@ import Language.C.Syntax.AST (CTypeSpecifier(CCharType, CDoubleType, CFloatType,
                               CStructTag(CStructTag),
                               CStatement(CCompound, CExpr),
                               CFunctionDef(CFunDef),
-                              CExternalDeclaration(CDeclExt),
+                              CExternalDeclaration(CDeclExt, CFDefExt),
                               CExpression(CCall, CVar),
                               CDerivedDeclarator(CFunDeclr, CPtrDeclr),
                               CDeclarator(CDeclr),
@@ -69,6 +70,10 @@ main = getIncludeFunctions >>= mapM_ printFun
         spec1u = map (fmap (const ())) spec1
         spec2u = map (fmap (const ())) spec2
 
+getDefinedFunctions = do
+  sources <- filter (\fn -> isSuffixOf ".c" fn && fn /= "defaults.c") <$> getDirectoryContents "."
+  concatMap (mapMaybe declMbFunName) <$> mapM readCFile sources
+
 getIncludeFunctions = do
   includes <- filter (`notElem` [".", ".."]) <$> getDirectoryContents "/usr/include/pulse"
   nubWith declName . sortWith declName . concat <$> mapM getFunctions includes
@@ -82,11 +87,17 @@ getFunctions file = do
     (createTmpSource tempDir file)
     removeFile
     (\tmpSource -> do
-      Right (CTranslUnit decls _) <- parseCFile (newGCC "gcc") Nothing ["-I/usr/include/pulse", "-I/usr/include/glib-2.0", "-I/usr/lib/i386-linux-gnu/glib-2.0/include"] tmpSource
+      decls <- readCFile tmpSource
       return [ decl | (CDeclExt decl@(CDecl _ [(Just (CDeclr (Just (Ident name _ _)) (CFunDeclr _ _ _ : _) _ _ _), Nothing, Nothing)] _)) <- decls,
                       "pa_" `isPrefixOf` name && not ("pa_simple_" `isPrefixOf` name) ])
 
+readCFile src = do 
+  (CTranslUnit decls _) <- fromEitherM =<< parseCFile (newGCC "gcc") Nothing ["-I/usr/include/pulse", "-I/usr/include/glib-2.0", "-I/usr/lib/i386-linux-gnu/glib-2.0/include"] src
+  return decls
+
 tuDecls (CTranslUnit decls _) = decls
+
+declMbFunName (CFDefExt (CFunDef _ (CDeclr (Just (Ident name _ _)) _ _ _ _) _ _ _)) = Just name
 
 createTmpSource :: String -> String -> IO String
 createTmpSource tempDir file = do
