@@ -1,5 +1,6 @@
 #include <pulse/utf8.h>
 #include <pulse/util.h>
+#include <pulse/version.h>
 
 #include <assert.h>
 #include <string.h>
@@ -64,4 +65,14 @@ char* pa_path_get_filename(const char* p)
 
     if ((sep = strrchr(p, '/')) != NULL) return sep + 1;
     else return (char*)p;
+}
+
+char *pa_get_binary_name(char *s, size_t l)
+{
+    return NULL;
+}
+
+const char* pa_get_library_version(void)
+{
+    return "2.0.0";
 }
