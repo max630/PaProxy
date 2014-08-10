@@ -63,7 +63,8 @@ main = do
     hPutStrLn mapfile "PULSE_0 {"
     hPutStrLn mapfile "global:"
     mapM_ (\iname -> hPutStrLn mapfile (iname ++ ";"))
-          (map declName includeFunctions)
+          (filter (`notElem` ["pa_encoding_from_string"]) $ map declName includeFunctions)
+    hPutStrLn mapfile "pa_format_info_free2;"
     hPutStrLn mapfile "local:"
     hPutStrLn mapfile "*;"
     hPutStrLn mapfile "};")
