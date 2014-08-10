@@ -25,7 +25,7 @@ import Language.C.Data.Node (NodeInfo, undefNode)
 import Language.C.Data.Ident (Ident(Ident), internalIdent)
 import Language.C.Pretty (Pretty(pretty))
 import System.Directory (removeFile, getDirectoryContents, getTemporaryDirectory)
-import System.IO (openBinaryTempFile, hPutStrLn, hClose)
+import System.IO
 import GHC.Exts (sortWith)
 
 import qualified Data.Set as S
@@ -54,10 +54,21 @@ data ReturnType = RTInt | RTPChar deriving (Eq, Ord, Show)
 main = do
   definedFunctions <- S.fromList <$> getDefinedFunctions
   (includeFunctions, includes) <- processIncludes
-  printHeader includes
-  mapM_ printFun $ filter (not . (`S.member` definedFunctions) . declName) includeFunctions
+  withBinaryFile "defaults.c" WriteMode (\defaults -> do
+    printHeader defaults includes
+    mapM_ (printFun defaults)
+          (filter (not . (`S.member` definedFunctions) . declName)
+                  includeFunctions))
+  withBinaryFile "map-libpulse" WriteMode (\mapfile -> do
+    hPutStrLn mapfile "PULSE_0 {"
+    hPutStrLn mapfile "global:"
+    mapM_ (\iname -> hPutStrLn mapfile (iname ++ ";"))
+          (map declName includeFunctions)
+    hPutStrLn mapfile "local:"
+    hPutStrLn mapfile "*;"
+    hPutStrLn mapfile "};")
   where
-    printFun decl@(CDecl spec1 [(Just (CDeclr (Just (Ident name _ _)) spec2 _ _ _), Nothing, Nothing)] _) = do
+    printFun defaults decl@(CDecl spec1 [(Just (CDeclr (Just (Ident name _ _)) spec2 _ _ _), Nothing, Nothing)] _) = do
       implName <- case (spec1, spec2) of
           ([CTypeSpec (CVoidType _)], [CFunDeclr _ _ _]) -> return "PAP_DEFAULT_VOID"
           ([CTypeSpec (CIntType _)], [CFunDeclr _ _ _]) -> return "PAP_DEFAULT_ZERO"
@@ -84,16 +95,16 @@ main = do
           ([CTypeQual (CConstQual _), CTypeSpec (CTypeDef (Ident paTypeName _ _) _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) | "pa_" `isPrefixOf` paTypeName -> return "PAP_DEFAULT_NULL"
           ([CTypeSpec (CSUType (CStruct CStructTag (Just (Ident "timeval" _ _)) _ _ _) _)], [CFunDeclr _ _ _, CPtrDeclr _ _]) -> return "PAP_DEFAULT_NULL"
           _ -> fail ("Unrecognized: " ++ show (pretty decl) ++ "\n" ++ show (fmap (const ()) decl))
-      putStrLn $ show $ pretty $ fmap (const undefNode) $ tryFun2 name implName spec1u spec2u
+      hPutStrLn defaults $ show $ pretty $ fmap (const undefNode) $ tryFun2 name implName spec1u spec2u
       where
         spec1u = map (fmap (const ())) spec1
         spec2u = map (fmap (const ())) spec2
 
-printHeader includes = do
-  mapM_ (\inc -> putStrLn ("#include <" ++ inc ++ ">")) includes
-  putStrLn ""
-  putStrLn "#include \"default_macros.h\""
-  putStrLn ""
+printHeader defaults includes = do
+  mapM_ (\inc -> hPutStrLn defaults ("#include <" ++ inc ++ ">")) includes
+  hPutStrLn defaults ""
+  hPutStrLn defaults "#include \"default_macros.h\""
+  hPutStrLn defaults ""
 
 getDefinedFunctions = do
   sources <- filter (\fn -> isSuffixOf ".c" fn && fn /= "defaults.c") <$> getDirectoryContents "."
