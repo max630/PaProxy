@@ -1,4 +1,5 @@
 #include <introspect.h>
+#include <format.h>
 
 #include "default_macros.h"
 
@@ -15,4 +16,8 @@ pa_operation * pa_context_add_autoload(pa_context * c,
                                        void * userdata)
 {
     PAP_DEFAULT_NULL();
+}
+
+void pa_format_info_free2(pa_format_info *f, void *userdata) {
+    pa_format_info_free(f);
 }
