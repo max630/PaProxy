@@ -8,3 +8,6 @@ libpulse_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-version-script=map-libpulse
 ACLOCAL_AMFLAGS = -I m4
 
 AM_CPPFLAGS = -I/usr/include/pulse
+
+defaults.c: MakeDefault.hs $(filter-out defaults.c,$(wildcard *.c))
+	./MakeDefault.hs
