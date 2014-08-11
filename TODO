@@ -1,0 +1,17 @@
+Strategy:
+
+* implement functionality enough for skype-4.3
+* fully implement all inteface  provided by libpulse
+* implement libpulse-simple and libpulse-mainloop-glib
+* implement Debian package which could provide all client
+  dependencies and get rid of pulseaudio presence in installation
+
+First target: implement functionality enough for skype-4.3. List of functions
+which skype supposedly uses is available in the skype.ltrace file. I believe
+after it's done skype will work.
+
+Patches and pullrequests are welcome. You can collaborate at GitHub,
+or send me emails directly to max@max630.net
+
+Source repository: https://github.com/max630/PaProxy
+Maintainer: Max Kirillov <max@max630.net>

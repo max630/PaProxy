@@ -1,2 +1,4 @@
-PaProxy, re-implementation of pulseaudio client API over other backend
+PaProxy, re-implementation of pulseaudio client API over other backend.
 
+Source repository: https://github.com/max630/PaProxy
+Maintainer: Max Kirillov <max@max630.net>
