@@ -1,4 +1,10 @@
 PaProxy, re-implementation of pulseaudio client API over other backend.
 
+Currently non-functional. Provides all symbols which provides libpulse.so.0. No
+real functionality yet, most functions are placeholders which report to stderr
+and return error.
+
+Please read TODO for roadmap.
+
 Source repository: https://github.com/max630/PaProxy
 Maintainer: Max Kirillov <max@max630.net>
