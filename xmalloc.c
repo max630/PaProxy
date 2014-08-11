@@ -19,11 +19,7 @@
   USA.
 ***/
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include "xmalloc.h"
+#include <pulse/xmalloc.h>
 
 #include <stdlib.h>
 #include <stdio.h>

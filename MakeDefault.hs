@@ -102,7 +102,7 @@ main = do
         spec2u = map (fmap (const ())) spec2
 
 printHeader defaults includes = do
-  mapM_ (\inc -> hPutStrLn defaults ("#include <" ++ inc ++ ">")) includes
+  mapM_ (\inc -> hPutStrLn defaults ("#include <pulse/" ++ inc ++ ">")) includes
   hPutStrLn defaults ""
   hPutStrLn defaults "#include \"default_macros.h\""
   hPutStrLn defaults ""
@@ -129,7 +129,7 @@ getFunctions file = do
                       "pa_" `isPrefixOf` name && not ("pa_simple_" `isPrefixOf` name) ])
 
 readCFile src = do 
-  (CTranslUnit decls _) <- fromEitherM =<< parseCFile (newGCC "gcc") Nothing ["-I/usr/include/pulse", "-I/usr/include/glib-2.0", "-I/usr/lib/i386-linux-gnu/glib-2.0/include"] src
+  (CTranslUnit decls _) <- fromEitherM =<< parseCFile (newGCC "gcc") Nothing [] src
   return decls
 
 tuDecls (CTranslUnit decls _) = decls
@@ -141,7 +141,7 @@ createTmpSource :: String -> String -> IO String
 createTmpSource tempDir file = do
   -- FIXME: this leaves file in case of error
   (path, handle) <- openBinaryTempFile tempDir "pulse_2include_XXXXXXXX.c"
-  hPutStrLn handle ("#include <" ++ file ++ ">")
+  hPutStrLn handle ("#include <pulse/" ++ file ++ ">")
   hClose handle
   return path
 
