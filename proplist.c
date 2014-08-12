@@ -21,32 +21,26 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <pulse/xmalloc.h>
 
 #include <assert.h>
-#include <search.h>
 #include <string.h>
 
-struct pap_tree_entry
+struct pap_entry
 {
     char* key;
     char* value;
 };
 
-static int compare_entry(const void* e1, const void* e2)
+static void destroy_entry(struct pap_entry* e)
 {
-    assert(e1);
-    assert(e2);
-    return strcmp(((const struct pap_tree_entry*)e1)->key, ((const struct pap_tree_entry*)e2)->key);
-};
-
-static void destroy_entry(void* e)
-{
-    pa_xfree(((struct pap_tree_entry*)e)->key);
-    pa_xfree(((struct pap_tree_entry*)e)->value);
-    pa_xfree(e);
+    pa_xfree(e->key);
+    pa_xfree(e->value);
+    e->key = e->value = NULL;
 }
 
 struct pa_proplist
 {
-    void* tree;
+    struct pap_entry* entries;
+    size_t entries_len;
+    size_t entries_allocated;
 };
 
 pa_proplist* pa_proplist_new(void)
@@ -57,8 +51,33 @@ pa_proplist* pa_proplist_new(void)
 
 void pa_proplist_free(pa_proplist* p)
 {
-    tdestroy(p->tree, &destroy_entry);
+    for (size_t i = 0; i < p->entries_len; ++i) {
+        destroy_entry(&p->entries[i]);
+    }
+    pa_xfree(p->entries);
     pa_xfree(p);
+}
+
+static struct pap_entry* lookup(pa_proplist* p, const char* key)
+{
+    for (size_t i = 0; i < p->entries_len; ++i) {
+        if (strcmp(p->entries[i].key, key) == 0)
+            return &p->entries[i];
+    }
+    return NULL;
+}
+
+static void push_back(pa_proplist* p, const char* key, const char* value)
+{
+    if (p->entries_len >= p->entries_allocated) {
+        size_t new_allocated = (p->entries_allocated > 0) ?  10 : (p->entries_allocated * 2);
+        p->entries = pa_xrealloc(p->entries, new_allocated * sizeof(struct pap_entry));
+        assert(p->entries);
+        p->entries_allocated = new_allocated;
+    }
+    p->entries[p->entries_len].key = pa_xstrdup(key);
+    p->entries[p->entries_len].value = pa_xstrdup(value);
+    p->entries_len++;
 }
 
 int pa_proplist_sets(pa_proplist *p, const char *key, const char *value)
@@ -66,16 +85,11 @@ int pa_proplist_sets(pa_proplist *p, const char *key, const char *value)
     // TODO:
     // 1. verify utf8
     // 2. assert != NULL all (outptu from pa_.. also)
-    struct pap_tree_entry sample = { .key = (char*)key, .value = NULL };
-    struct pap_tree_entry* existing = tfind(&sample, &p->tree, &compare_entry);
-    if (existing != NULL) {
-        pa_xfree(existing->value);
-        existing->value = pa_xstrdup(value);
+    struct pap_entry* found = NULL;
+    if (p->entries != NULL && (found = lookup(p, key)) != NULL) {
+        pa_xfree(found->value);
+        found->value = pa_xstrdup(value);
     } else {
-        struct pap_tree_entry* new_entry = pa_xmalloc(sizeof(struct pap_tree_entry));
-        new_entry->key = pa_xstrdup(key);
-        new_entry->value = pa_xstrdup(value);
-        tsearch(new_entry, &p->tree, &compare_entry);
+        push_back(p, key, value);
     }
-    return 0;
 }
