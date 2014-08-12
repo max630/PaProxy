@@ -37,6 +37,13 @@ static int compare_entry(const void* e1, const void* e2)
     return strcmp(((const struct pap_tree_entry*)e1)->key, ((const struct pap_tree_entry*)e2)->key);
 };
 
+static void destroy_entry(void* e)
+{
+    pa_xfree(((struct pap_tree_entry*)e)->key);
+    pa_xfree(((struct pap_tree_entry*)e)->value);
+    pa_xfree(e);
+}
+
 struct pa_proplist
 {
     void* tree;
@@ -50,7 +57,7 @@ pa_proplist* pa_proplist_new(void)
 
 void pa_proplist_free(pa_proplist* p)
 {
-    // TODO: clean correctly
+    tdestroy(p->tree, &destroy_entry);
     pa_xfree(p);
 }
 
