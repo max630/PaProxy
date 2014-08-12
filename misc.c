@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
 #include <pulse/utf8.h>
 #include <pulse/util.h>
 #include <pulse/version.h>
+#include <pulse/xmalloc.h>
 
 #include <assert.h>
 #include <string.h>
@@ -75,6 +76,12 @@ char *pa_utf8_valid(const char *str)
     }
 
     return (char*)str;
+}
+
+char *pa_utf8_filter(const char *str)
+{
+    // TODO: really filter
+    return pa_xstrdup(str);
 }
 
 char* pa_path_get_filename(const char* p)
