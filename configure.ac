@@ -15,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-AC_INIT([pulseproxy-alsa], [0.1])
+AC_INIT([pulseproxy-alsa], [0.0.2])
 AM_INIT_AUTOMAKE
 AC_PROG_CC
 AC_PROG_LIBTOOL
