@@ -24,6 +24,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <search.h>
 #include <string.h>
 
+#include "default_macros.h"
+
 struct pap_tree_entry
 {
     char* key;
@@ -78,4 +80,21 @@ int pa_proplist_sets(pa_proplist *p, const char *key, const char *value)
         tsearch(new_entry, &p->tree, &compare_entry);
     }
     return 0;
+}
+
+void pa_proplist_update(pa_proplist *p, pa_update_mode_t mode, const pa_proplist *other)
+{
+    int ifReplace = 0;
+    switch (mode) {
+    case PA_UPDATE_SET:
+        pap_report_undefined("pa_proplist_update(PA_UPDATE_SET)");
+        pa_proplist_update(p, PA_UPDATE_REPLACE, other);
+        break;
+    case PA_UPDATE_REPLACE:
+        ifReplace = 1;
+        break;
+    case PA_UPDATE_MERGE:
+        ifReplace = 0;
+        break;
+    }
 }
