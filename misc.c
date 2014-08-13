@@ -84,6 +84,18 @@ char *pa_utf8_filter(const char *str)
     return pa_xstrdup(str);
 }
 
+char* pa_locale_to_utf8(const char *str)
+{
+    // TODO: fix for non-utf
+    return pa_xstrdup(str);
+}
+
+char* pa_utf8_to_locale(const char *str)
+{
+    // TODO: fix for non-utf
+    return pa_xstrdup(str);
+}
+
 char* pa_path_get_filename(const char* p)
 {
     char* sep = NULL;
