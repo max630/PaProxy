@@ -93,3 +93,45 @@ int pa_proplist_sets(pa_proplist *p, const char *key, const char *value)
         push_back(p, key, value);
     }
 }
+
+static void update_set(pa_proplist* p, const pa_proplist* other)
+{
+    for (size_t i = 0; i < p->entries_len; ++i) {
+        destroy_entry(&p->entries[i]);
+    }
+    for (size_t i = 0; i < other->entries_len; ++i) {
+        push_back(p, other->entries[i].key, other->entries[i].value);
+    }
+}
+
+static void update_merge(pa_proplist* p, const pa_proplist* other, int replace)
+{
+    // TODO: optimize to be at least non-quadratic (sort both then merge)
+    for (size_t i = 0; i < other->entries_len; ++i) {
+        struct pap_entry* found = NULL;
+        if (p->entries != NULL && (found = lookup(p, other->entries[i].key)) != NULL) {
+            if (replace) {
+                pa_xfree(found->value);
+                found->value = pa_xstrdup(other->entries[i].value);
+            }
+        } else {
+            push_back(p, other->entries[i].key, other->entries[i].value);
+        }
+    }
+
+}
+
+void pa_proplist_update(pa_proplist *p, pa_update_mode_t mode, const pa_proplist *other)
+{
+    switch (mode) {
+    case PA_UPDATE_SET:
+        update_set(p, other);
+        break;
+    case PA_UPDATE_REPLACE:
+        update_merge(p, other, 1);
+        break;
+    case PA_UPDATE_MERGE:
+        update_merge(p, other, 0);
+        break;
+    }
+}
