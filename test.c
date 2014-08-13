@@ -13,6 +13,11 @@ static int fail_count = 0;
     } \
 } while(0)
 
+static int test_summary()
+{
+    printf("Failures: %d\n", fail_count);
+    return (fail_count > 0) ? 1 : 0;
+}
 
 int main()
 {
@@ -23,4 +28,6 @@ int main()
     ASSERT(pa_proplist_sets(pl, "prop2", "bbbb") == PA_OK);
 
     pa_proplist_free(pl);
+
+    return test_summary();
 }

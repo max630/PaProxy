@@ -30,7 +30,7 @@ test_LDADD = -lpulse
 ACLOCAL_AMFLAGS = -I m4
 
 if ENABLE_MAKEDEFAULTS
-defaults.c: MakeDefault.hs $(filter-out defaults.c,$(wildcard *.c))
+defaults.c: MakeDefault.hs $(filter-out defaults.c test.c,$(wildcard *.c))
 	./MakeDefault.hs
 
 maintainer-clean-local:
