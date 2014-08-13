@@ -17,6 +17,7 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include <pulse/def.h>
 #include <pulse/proplist.h>
 #include <pulse/xmalloc.h>
 
@@ -58,6 +59,11 @@ void pa_proplist_free(pa_proplist* p)
     pa_xfree(p);
 }
 
+unsigned pa_proplist_size(pa_proplist *p)
+{
+    return (unsigned)p->entries_len;
+}
+
 static struct pap_entry* lookup(pa_proplist* p, const char* key)
 {
     for (size_t i = 0; i < p->entries_len; ++i) {
@@ -91,6 +97,17 @@ int pa_proplist_sets(pa_proplist *p, const char *key, const char *value)
         found->value = pa_xstrdup(value);
     } else {
         push_back(p, key, value);
+    }
+    return PA_OK;
+}
+
+const char *pa_proplist_gets(pa_proplist *p, const char *key)
+{
+    struct pap_entry* found = NULL;
+    if (p->entries != NULL && (found = lookup(p, key)) != NULL) {
+        return found->value;
+    } else {
+        return NULL;
     }
 }
 
