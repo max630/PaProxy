@@ -1,3 +1,4 @@
+#include <pulse/def.h>
 #include <pulse/proplist.h>
 
 #include <stdio.h>
@@ -18,8 +19,8 @@ int main()
     pa_proplist* pl = NULL;
     ASSERT((pl = pa_proplist_new()) != NULL);
 
-    ASSERT(pa_proplist_sets(pl, "prop1", "aaaa"));
-    ASSERT(pa_proplist_sets(pl, "prop2", "bbbb"));
+    ASSERT(pa_proplist_sets(pl, "prop1", "aaaa") == PA_OK);
+    ASSERT(pa_proplist_sets(pl, "prop2", "bbbb") == PA_OK);
 
     pa_proplist_free(pl);
 }
