@@ -86,6 +86,11 @@ static void push_back(pa_proplist* p, const char* key, const char* value)
     p->entries_len++;
 }
 
+int pa_proplist_contains(pa_proplist *p, const char *key)
+{
+    return (p->entries != NULL && lookup(p, key) != NULL);
+}
+
 int pa_proplist_sets(pa_proplist *p, const char *key, const char *value)
 {
     // TODO:

@@ -51,6 +51,9 @@ static int test_smoke()
     ASSERT(strcmp(pa_proplist_gets(pl, "prop2"), "bbbb") == 0);
     ASSERT(pa_proplist_gets(pl, "prop3") == NULL);
 
+    ASSERT(pa_proplist_contains(pl, "prop1"));
+    ASSERT(!pa_proplist_contains(pl, "prop3"));
+    
     pa_proplist_free(pl);
 
     return 0;
