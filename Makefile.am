@@ -16,12 +16,16 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 lib_LTLIBRARIES = libpulse.la
+check_PROGRAMS = test
 
 AM_CFLAGS = -Wimplicit -Werror -g --std=gnu99
 AM_CPPFLAGS = -D_GNU_SOURCE
 
 libpulse_la_SOURCES = misc.c channels.c proplist.c sample.c xmalloc.c defaults.c defaults-specials.c default_macros.c
 libpulse_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-version-script=map-libpulse
+
+test_SOURCES = test.c
+test_LDADD = -lpulse
 
 ACLOCAL_AMFLAGS = -I m4
 
