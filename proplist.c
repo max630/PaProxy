@@ -116,6 +116,7 @@ static void update_set(pa_proplist* p, const pa_proplist* other)
     for (size_t i = 0; i < p->entries_len; ++i) {
         destroy_entry(&p->entries[i]);
     }
+    p->entries_len = 0;
     for (size_t i = 0; i < other->entries_len; ++i) {
         push_back(p, other->entries[i].key, other->entries[i].value);
     }
