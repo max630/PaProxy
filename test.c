@@ -14,6 +14,15 @@ static int fail_count = 0;
     } \
 } while(0)
 
+#define ASSERT_X(expr, format, ...) do { \
+    if (!(expr)) { \
+        fprintf(stderr, "Failed: %s\n", #expr); \
+        fprintf(stderr, " > " format "\n", ## __VA_ARGS__); \
+        fail_count++; \
+        return 1; \
+    } \
+} while(0)
+
 #define EXPECT(expr) do { \
     if (!(expr)) { \
         fprintf(stderr, "Failed: %s\n", #expr); \
@@ -60,7 +69,7 @@ static int test_update_set()
     ASSERT(pa_proplist_sets(pl2, "prop3", "dddd") == PA_OK);
 
     pa_proplist_update(pl, PA_UPDATE_SET, pl2);
-    ASSERT(pa_proplist_size(pl) == 2);
+    ASSERT_X(pa_proplist_size(pl) == 2, "Actual size: %u", pa_proplist_size(pl));
     ASSERT(strcmp(pa_proplist_gets(pl, "prop2"), "cccc") == 0);
     ASSERT(strcmp(pa_proplist_gets(pl, "prop3"), "dddd") == 0);
 
