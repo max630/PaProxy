@@ -70,7 +70,7 @@ static struct pap_entry* lookup(pa_proplist* p, const char* key)
 static void push_back(pa_proplist* p, const char* key, const char* value)
 {
     if (p->entries_len >= p->entries_allocated) {
-        size_t new_allocated = (p->entries_allocated > 0) ?  10 : (p->entries_allocated * 2);
+        size_t new_allocated = (p->entries_allocated > 0) ? (p->entries_allocated * 2) : 10;
         p->entries = pa_xrealloc(p->entries, new_allocated * sizeof(struct pap_entry));
         assert(p->entries);
         p->entries_allocated = new_allocated;
