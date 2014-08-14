@@ -24,6 +24,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <pulse/version.h>
 #include <pulse/xmalloc.h>
 
+#include "misc.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -157,4 +159,17 @@ const char* pa_strerror(int error)
     }
 
     return pap_errors[error];
+}
+
+char* pap_strcat(char* str1, const char* str2)
+{
+    if (str1) {
+        size_t len1 = strlen(str1);
+        size_t len2 = strlen(str2);
+        char* ret = pa_xrealloc(str1, len1 + len2 + 1);
+        strncpy(str1+len1, str2, len2);
+        return ret;
+    } else {
+        return pa_xstrdup(str2);
+    }
 }

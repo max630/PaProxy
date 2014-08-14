@@ -32,6 +32,9 @@ struct pa_context {
 
 pa_context *pa_context_new_with_proplist(pa_mainloop_api *mainloop, const char *name, pa_proplist *proplist)
 {
+    char* prop_string = pa_proplist_to_string(proplist);
+    fprintf(stderr, "%s: name = %s, props = %s\n", __func__, name, prop_string);
+    pa_xfree(prop_string);
     pa_context* ret = pa_xmalloc0(sizeof(pa_context));
     ret->use_count = 1;
 }

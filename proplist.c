@@ -21,6 +21,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <pulse/proplist.h>
 #include <pulse/xmalloc.h>
 
+#include "misc.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -157,4 +159,19 @@ void pa_proplist_update(pa_proplist *p, pa_update_mode_t mode, const pa_proplist
         update_merge(p, other, 0);
         break;
     }
+}
+
+char *pa_proplist_to_string(pa_proplist *p)
+{
+    return pap_strcat(pa_proplist_to_string_sep(p, "\n"), "\n");
+}
+
+char *pa_proplist_to_string_sep(pa_proplist *p, const char *sep)
+{
+    char* ret = NULL;
+    for (size_t i = 0; i < p->entries_len; ++i) {
+        if (i > 0) ret = pap_strcat(ret, sep);
+        ret = pap_strcat(pap_strcat(pap_strcat(ret, p->entries[i].key), " = "), p->entries[i].value);
+    }
+    return ret;
 }
