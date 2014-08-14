@@ -17,12 +17,15 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include <pulse/def.h>
+#include <pulse/error.h>
 #include <pulse/utf8.h>
 #include <pulse/util.h>
 #include <pulse/version.h>
 #include <pulse/xmalloc.h>
 
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
 
 static int check_utf8_tail_valid(char** p, int count)
@@ -113,4 +116,45 @@ char *pa_get_binary_name(char *s, size_t l)
 const char* pa_get_library_version(void)
 {
     return "2.0.0";
+}
+
+static const char* pap_errors[] = {
+    "No error",
+    "Access failure",
+    "Unknown command",
+    "Invalid argument",
+    "Entity exists",
+    "No such entity",
+    "Connection refused",
+    "Protocol error",
+    "Timeout",
+    "No authorization key",
+    "Internal error",
+    "Connection terminated",
+    "Entity killed",
+    "Invalid server",
+    "Module initialization failed",
+    "Bad state",
+    "No data",
+    "Incompatible protocol version",
+    "Data too large",
+    "Operation not supported",
+    "The error code was unknown to the client",
+    "Extension does not exist.",
+    "Obsolete functionality.",
+    "Missing implementation.",
+    "The caller forked without calling execve() and tried to reuse the context.",
+    "An IO error happened.",
+    "Device or resource busy.",
+    "Not really an error but the first invalid error code"
+};
+
+const char* pa_strerror(int error)
+{
+    if (error < 0 || error >= PA_ERR_MAX) {
+        fprintf(stderr, "%s: Invalid error %d\n", __func__, error);
+        return "Invalid error code";
+    }
+
+    return pap_errors[error];
 }
