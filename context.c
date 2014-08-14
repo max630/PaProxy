@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdio.h>
 
 struct pa_context {
+    unsigned use_count;
     int last_errno;
     pa_context_notify_cb_t state_cb;
     void* state_cb_data;
@@ -31,7 +32,16 @@ struct pa_context {
 
 pa_context *pa_context_new_with_proplist(pa_mainloop_api *mainloop, const char *name, pa_proplist *proplist)
 {
-    return pa_xmalloc0(sizeof(pa_context));
+    pa_context* ret = pa_xmalloc0(sizeof(pa_context));
+    ret->use_count = 1;
+}
+
+void pa_context_unref(pa_context *c)
+{
+    --c->use_count;
+    if (c->use_count == 0) {
+        pa_xfree(c);
+    }
 }
 
 int pa_context_errno(pa_context *c)
