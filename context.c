@@ -57,7 +57,6 @@ void pa_context_set_state_callback(pa_context *c, pa_context_notify_cb_t cb, voi
 
 int pa_context_connect(pa_context *c, const char *server, pa_context_flags_t flags, const pa_spawn_api *api)
 {
-    c->last_errno = PA_ERR_CONNECTIONREFUSED;
     fprintf(stderr, "%s: server = %s\n", __func__, server);
-    return -PA_ERR_CONNECTIONREFUSED;
+    return 0;
 }
