@@ -22,6 +22,7 @@ AM_CFLAGS = -Wimplicit -Werror -g --std=gnu99
 AM_CPPFLAGS = -D_GNU_SOURCE
 
 libpulse_la_SOURCES = misc.c channels.c proplist.c sample.c xmalloc.c \
+		      mainloop.c \
 		      defaults.c defaults-specials.c default_macros.c
 libpulse_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-version-script=map-libpulse
 
