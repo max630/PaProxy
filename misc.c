@@ -167,7 +167,8 @@ char* pap_strcat(char* str1, const char* str2)
         size_t len1 = strlen(str1);
         size_t len2 = strlen(str2);
         char* ret = pa_xrealloc(str1, len1 + len2 + 1);
-        strncpy(str1+len1, str2, len2);
+        strncpy(ret+len1, str2, len2);
+        ret[len1 + len2] = '\0';
         return ret;
     } else {
         return pa_xstrdup(str2);
