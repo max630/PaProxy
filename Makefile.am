@@ -31,8 +31,8 @@ libpulse_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-version-script=map-libpulse
 t_proplist_SOURCES = t_proplist.c
 t_proplist_LDADD = -lpulse
 
-t_proplist_SOURCES = t_mainloop.c
-t_proplist_LDADD = -lpulse
+t_mainloop_SOURCES = t_mainloop.c
+t_mainloop_LDADD = -lpulse
 
 ACLOCAL_AMFLAGS = -I m4
 
