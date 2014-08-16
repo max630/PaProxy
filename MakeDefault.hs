@@ -3,7 +3,7 @@ module MakeDefault(main) where
 
 import Control.Applicative ((<$>))
 import Control.Exception (bracket)
-import Data.List (nubBy, isPrefixOf, isSuffixOf)
+import Data.List (nubBy, isPrefixOf, isSuffixOf, intersperse)
 import Data.Maybe (mapMaybe)
 import Language.C (parseCFile)
 import Language.C.Syntax.AST (CTypeSpecifier(CCharType, CDoubleType, CFloatType, CIntType, CSUType, CTypeDef, CUnsigType, CVoidType),
@@ -23,9 +23,11 @@ import Language.C.Syntax.AST (CTypeSpecifier(CCharType, CDoubleType, CFloatType,
 import Language.C.System.GCC (newGCC)
 import Language.C.Data.Node (NodeInfo, undefNode)
 import Language.C.Data.Ident (Ident(Ident), internalIdent)
+import Language.C.Data.Position (posFile, posRow, posColumn)
+import Language.C.Parser (ParseError(ParseError))
 import Language.C.Pretty (Pretty(pretty))
 import System.Directory (removeFile, getDirectoryContents, getTemporaryDirectory)
-import System.IO
+import System.IO (IOMode(WriteMode), withBinaryFile, openBinaryTempFile, hPutStrLn, hClose)
 import GHC.Exts (sortWith)
 
 import qualified Data.Set as S
@@ -128,9 +130,13 @@ getFunctions file = do
       return [ decl | (CDeclExt decl@(CDecl _ [(Just (CDeclr (Just (Ident name _ _)) (CFunDeclr _ _ _ : _) _ _ _), Nothing, Nothing)] _)) <- decls,
                       "pa_" `isPrefixOf` name && not ("pa_simple_" `isPrefixOf` name) ])
 
-readCFile src = do 
-  (CTranslUnit decls _) <- fromEitherM =<< parseCFile (newGCC "gcc") Nothing [] src
-  return decls
+readCFile src = do
+  res <- parseCFile (newGCC "gcc") Nothing [] src
+  case res of
+    Left (ParseError (errors, pos)) -> do
+      putStrLn (posFile pos ++ ":" ++ show (posRow pos) ++ ":0: " ++ concat (intersperse "\n" errors))
+      fail "Parsing failed"
+    Right (CTranslUnit decls _) -> return decls
 
 tuDecls (CTranslUnit decls _) = decls
 
@@ -151,9 +157,6 @@ tryFun2 funName macroName spec1 spec2 =
                                   []
                                   (CCompound [] [CBlockStmt (CExpr (Just (CCall (CVar (internalIdent macroName) ()) [] ())) ())] ())
                                   ())
-
-fromEitherM (Right r) = return r
-fromEitherM (Left e) = fail (show e)
 
 nubWith f l = nubBy (\v1 v2 -> f v1 == f v2) l
 
