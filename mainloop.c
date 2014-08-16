@@ -193,7 +193,7 @@ int pa_mainloop_run(pa_mainloop *m, int *retval)
 {
     while (!m->stopped) {
         for (size_t i = 0; i < m->defers_len; ++i) {
-            if (m->defers[i].cb) {
+            if (m->defers[i].cb && m->defers[i].enabled) {
                 m->defers[i].cb(&m->api, m->defers[i].event, m->defers[i].userdata);
             }
         }
