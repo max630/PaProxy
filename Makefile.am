@@ -21,9 +21,11 @@ check_PROGRAMS = t_proplist
 AM_CFLAGS = -Wimplicit -Werror -g --std=gnu99
 AM_CPPFLAGS = -D_GNU_SOURCE
 
-libpulse_la_SOURCES = misc.c channels.c proplist.c sample.c xmalloc.c \
-		      mainloop.c context.c \
-		      defaults.c defaults-specials.c default_macros.c
+libpulse_impl_sources = misc.c channels.c proplist.c sample.c xmalloc.c \
+		        mainloop.c context.c \
+			defaults-specials.c
+
+libpulse_la_SOURCES = $(libpulse_impl_sources) defaults.c default_macros.c
 libpulse_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-version-script=map-libpulse
 
 t_proplist_SOURCES = t_proplist.c
@@ -32,7 +34,7 @@ t_proplist_LDADD = -lpulse
 ACLOCAL_AMFLAGS = -I m4
 
 if ENABLE_MAKEDEFAULTS
-defaults.c: MakeDefault.hs $(filter-out defaults.c test.c,$(wildcard *.c))
+defaults.c: MakeDefault.hs $(libpulse_impl_sources)
 	./MakeDefault.hs
 
 maintainer-clean-local:
