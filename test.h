@@ -26,7 +26,7 @@ int fail_count = 0;
 
 #define ASSERT(expr) do { \
     if (!(expr)) { \
-        fprintf(stderr, "%s:%d Failed: %s\n", __FILE__, __LINE__, #expr); \
+        fprintf(stderr, "%s:%d: Failed: %s\n", __FILE__, __LINE__, #expr); \
         fail_count++; \
         return 1; \
     } \
@@ -34,7 +34,7 @@ int fail_count = 0;
 
 #define ASSERT_X(expr, format, ...) do { \
     if (!(expr)) { \
-        fprintf(stderr, "%s:%d Failed: %s\n", __FILE__, __LINE__, #expr); \
+        fprintf(stderr, "%s:%d: Failed: %s\n", __FILE__, __LINE__, #expr); \
         fprintf(stderr, " > " format "\n", ## __VA_ARGS__); \
         fail_count++; \
         return 1; \
@@ -43,7 +43,7 @@ int fail_count = 0;
 
 #define EXPECT(expr) do { \
     if (!(expr)) { \
-        fprintf(stderr, "%s:%d Failed: %s\n", __FILE__, __LINE__, #expr); \
+        fprintf(stderr, "%s:%d: Failed: %s\n", __FILE__, __LINE__, #expr); \
         fail_count++; \
     } \
 } while(0)
