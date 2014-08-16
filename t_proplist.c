@@ -23,39 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdio.h>
 #include <string.h>
 
-static int fail_count = 0;
-
-#define ASSERT(expr) do { \
-    if (!(expr)) { \
-        fprintf(stderr, "Failed: %s\n", #expr); \
-        fail_count++; \
-        return 1; \
-    } \
-} while(0)
-
-#define ASSERT_X(expr, format, ...) do { \
-    if (!(expr)) { \
-        fprintf(stderr, "Failed: %s\n", #expr); \
-        fprintf(stderr, " > " format "\n", ## __VA_ARGS__); \
-        fail_count++; \
-        return 1; \
-    } \
-} while(0)
-
-#define EXPECT(expr) do { \
-    if (!(expr)) { \
-        fprintf(stderr, "Failed: %s\n", #expr); \
-        fail_count++; \
-    } \
-} while(0)
-
-#define SUB(name) EXPECT(name() == 0)
-
-static int test_summary()
-{
-    printf("Failures: %d\n", fail_count);
-    return (fail_count > 0) ? 1 : 0;
-}
+#include "test.h"
 
 static int test_smoke()
 {
