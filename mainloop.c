@@ -150,9 +150,19 @@ static void pap_poll_defer_free(pa_defer_event* e)
 }
 
 static void pap_poll_defer_set_destroy(pa_defer_event *e, pa_defer_event_destroy_cb_t cb)
-{ PAP_POLL_DEFAULT_VOID_EV(); }
+{
+    pa_mainloop* m = e->mainloop;
+
+    m->defers[e->idx].destroy_cb = cb;
+}
+
 static void pap_poll_quit(pa_mainloop_api*a, int retval)
-{ PAP_POLL_DEFAULT_VOID(); }
+{
+    pa_mainloop* m = mainloop(a);
+
+    m->stopped = 1;
+    m->retval = retval;
+}
 
 pa_mainloop *pa_mainloop_new(void)
 {
@@ -177,4 +187,18 @@ pa_mainloop *pa_mainloop_new(void)
 pa_mainloop_api* pa_mainloop_get_api(pa_mainloop*m)
 {
     return &m->api;
+}
+
+int pa_mainloop_run(pa_mainloop *m, int *retval)
+{
+    while (!m->stopped) {
+        for (size_t i = 0; i < m->defers_len; ++i) {
+            if (m->defers[i].cb) {
+                m->defers[i].cb(&m->api, m->defers[i].event, m->defers[i].userdata);
+            }
+        }
+    }
+
+    if (retval)
+        *retval = m->retval;
 }
