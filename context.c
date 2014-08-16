@@ -63,6 +63,12 @@ pa_context *pa_context_new_with_proplist(pa_mainloop_api *mainloop, const char *
     return ret;
 }
 
+pa_context* pa_context_ref(pa_context *c)
+{
+    ++c->use_count;
+    return c;
+}
+
 void pa_context_unref(pa_context *c)
 {
     --c->use_count;
