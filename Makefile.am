@@ -22,7 +22,7 @@ AM_CFLAGS = -Wimplicit -Werror -g --std=gnu99
 AM_CPPFLAGS = -D_GNU_SOURCE
 
 libpulse_impl_sources = misc.c channels.c proplist.c sample.c xmalloc.c \
-		        mainloop.c context.c \
+		        mainloop.c context.c stream.c \
 			defaults-specials.c
 
 libpulse_la_SOURCES = $(libpulse_impl_sources) defaults.c default_macros.c
