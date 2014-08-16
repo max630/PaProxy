@@ -25,10 +25,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string.h>
 
 #include "default_macros.h"
+#include "misc.h"
 
 #define PAP_POLL_DEFAULT_NULL() \
     pap_report_undefined(__func__); \
-    if (m(a)) m(a)->last_errno = PA_ERR_NOTIMPLEMENTED; \
+    if (mainloop(a)) mainloop(a)->last_errno = PA_ERR_NOTIMPLEMENTED; \
     return NULL;
 
 #define PAP_POLL_DEFAULT_VOID_EV() \
@@ -37,18 +38,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define PAP_POLL_DEFAULT_VOID() \
     pap_report_undefined(__func__); \
-    if (m(a)) m(a)->last_errno = PA_ERR_NOTIMPLEMENTED; \
+    if (mainloop(a)) mainloop(a)->last_errno = PA_ERR_NOTIMPLEMENTED; \
     return;
 
 struct pa_defer_event {
+    pa_mainloop* mainloop;
     size_t idx;
 };
 
 struct defer_data {
+    int enabled;
     pa_defer_event_cb_t cb;
     void* userdata;
     pa_defer_event_destroy_cb_t destroy_cb;
-    pa_defer_event event;
+    pa_defer_event* event;
 };
 
 struct pa_mainloop {
@@ -65,7 +68,9 @@ static void destroy_defer(pa_mainloop* m, size_t i)
 {
     assert(i < m->defers_len);
     if (m->defers[i].destroy_cb)
-        m->defers[i].destroy_cb(pa_mainloop_get_api(m), &m->defers[i].event, m->defers[i].userdata);
+        m->defers[i].destroy_cb(pa_mainloop_get_api(m), m->defers[i].event, m->defers[i].userdata);
+    if (m->defers[i].event)
+        pa_xfree(m->defers[i].event);
     memset(&m->defers[i], sizeof(m->defers[i]), 0);
     if (i == m->defers_len - 1)
         m->defers_len--;
@@ -80,7 +85,7 @@ void pa_mainloop_free(pa_mainloop* m)
     pa_xfree(m);
 }
 
-static pa_mainloop* m(pa_mainloop_api*a)
+static pa_mainloop* mainloop(pa_mainloop_api*a)
 {
     if(a) return (pa_mainloop*) a->userdata;
 }
@@ -101,12 +106,49 @@ static void pap_poll_time_free(pa_time_event* e)
 { PAP_POLL_DEFAULT_VOID_EV(); }
 static void pap_poll_time_set_destroy(pa_time_event *e, pa_time_event_destroy_cb_t cb)
 { PAP_POLL_DEFAULT_VOID_EV(); }
+
 static pa_defer_event* pap_poll_defer_new(pa_mainloop_api*a, pa_defer_event_cb_t cb, void *userdata)
-{ PAP_POLL_DEFAULT_NULL(); }
+{
+    pa_mainloop* m = mainloop(a);
+    size_t idx = (size_t)(-1);
+    for (size_t i = 0; i < m->defers_len; ++i) {
+        if (m->defers[i].cb == 0) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx == (size_t)(-1)) {
+        // no free slot
+        if (m->defers_len >= m->defers_size) PAP_GROW(m->defers, m->defers_size);
+        idx = m->defers_len;
+        m->defers_len++;
+    }
+    m->defers[idx].enabled = 1;
+    m->defers[idx].cb = cb;
+    m->defers[idx].userdata = userdata;
+    m->defers[idx].destroy_cb = NULL;
+    m->defers[idx].event = pa_xmalloc0(sizeof(*m->defers[idx].event));
+    m->defers[idx].event->mainloop = m;
+    m->defers[idx].event->idx = idx;
+
+    return m->defers[idx].event;
+}
+
 static void pap_poll_defer_enable(pa_defer_event* e, int b)
-{ PAP_POLL_DEFAULT_VOID_EV(); }
+{
+    pa_mainloop* m = e->mainloop;
+
+    m->defers[e->idx].enabled = b;
+}
+
+
 static void pap_poll_defer_free(pa_defer_event* e)
-{ PAP_POLL_DEFAULT_VOID_EV(); }
+{
+    pa_mainloop* m = e->mainloop;
+
+    destroy_defer(m, e->idx);
+}
+
 static void pap_poll_defer_set_destroy(pa_defer_event *e, pa_defer_event_destroy_cb_t cb)
 { PAP_POLL_DEFAULT_VOID_EV(); }
 static void pap_poll_quit(pa_mainloop_api*a, int retval)
