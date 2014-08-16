@@ -58,6 +58,7 @@ struct pa_mainloop {
     struct defer_data* defers;
     size_t defers_len;
     size_t defers_size;
+    pa_mainloop_api api;
 };
 
 static void destroy_defer(pa_mainloop* m, size_t i)
@@ -68,11 +69,6 @@ static void destroy_defer(pa_mainloop* m, size_t i)
     memset(&m->defers[i], sizeof(m->defers[i]), 0);
     if (i == m->defers_len - 1)
         m->defers_len--;
-}
-
-pa_mainloop *pa_mainloop_new(void)
-{
-    return pa_xmalloc0(sizeof(pa_mainloop));
 }
 
 void pa_mainloop_free(pa_mainloop* m)
@@ -116,23 +112,27 @@ static void pap_poll_defer_set_destroy(pa_defer_event *e, pa_defer_event_destroy
 static void pap_poll_quit(pa_mainloop_api*a, int retval)
 { PAP_POLL_DEFAULT_VOID(); }
 
-// FIXME: store this inside mainloop struct and don't allocate anew
+pa_mainloop *pa_mainloop_new(void)
+{
+    pa_mainloop* ret = pa_xmalloc0(sizeof(pa_mainloop));
+    ret->api.userdata = ret;
+    ret->api.io_new = &pap_poll_io_new;
+    ret->api.io_enable = &pap_poll_io_enable;
+    ret->api.io_free = &pap_poll_io_free;
+    ret->api.io_set_destroy = &pap_poll_io_set_destroy;
+    ret->api.time_new = &pap_poll_time_new;
+    ret->api.time_restart = &pap_poll_time_restart;
+    ret->api.time_free = &pap_poll_time_free;
+    ret->api.time_set_destroy = &pap_poll_time_set_destroy;
+    ret->api.defer_new = &pap_poll_defer_new;
+    ret->api.defer_enable = &pap_poll_defer_enable;
+    ret->api.defer_free = &pap_poll_defer_free;
+    ret->api.defer_set_destroy = &pap_poll_defer_set_destroy;
+    ret->api.quit = &pap_poll_quit;
+    return ret;
+}
+
 pa_mainloop_api* pa_mainloop_get_api(pa_mainloop*m)
 {
-    pa_mainloop_api* ret = pa_xmalloc0(sizeof(pa_mainloop_api));
-    ret->userdata = m;
-    ret->io_new = &pap_poll_io_new;
-    ret->io_enable = &pap_poll_io_enable;
-    ret->io_free = &pap_poll_io_free;
-    ret->io_set_destroy = &pap_poll_io_set_destroy;
-    ret->time_new = &pap_poll_time_new;
-    ret->time_restart = &pap_poll_time_restart;
-    ret->time_free = &pap_poll_time_free;
-    ret->time_set_destroy = &pap_poll_time_set_destroy;
-    ret->defer_new = &pap_poll_defer_new;
-    ret->defer_enable = &pap_poll_defer_enable;
-    ret->defer_free = &pap_poll_defer_free;
-    ret->defer_set_destroy = &pap_poll_defer_set_destroy;
-    ret->quit = &pap_poll_quit;
-    return ret;
+    return &m->api;
 }
