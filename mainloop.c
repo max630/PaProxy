@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <pulse/mainloop-api.h>
 #include <pulse/xmalloc.h>
 
+#include <string.h>
+
 #include "default_macros.h"
 
 #define PAP_POLL_DEFAULT_NULL() \
@@ -38,11 +40,35 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
     if (m(a)) m(a)->last_errno = PA_ERR_NOTIMPLEMENTED; \
     return;
 
+struct pa_defer_event {
+    size_t idx;
+};
+
+struct defer_data {
+    pa_defer_event_cb_t cb;
+    void* userdata;
+    pa_defer_event_destroy_cb_t destroy_cb;
+    pa_defer_event event;
+};
+
 struct pa_mainloop {
     int last_errno;
     int stopped;
     int retval;
+    struct defer_data* defers;
+    size_t defers_len;
+    size_t defers_size;
 };
+
+static void destroy_defer(pa_mainloop* m, size_t i)
+{
+    assert(i < m->defers_len);
+    if (m->defers[i].destroy_cb)
+        m->defers[i].destroy_cb(pa_mainloop_get_api(m), &m->defers[i].event, m->defers[i].userdata);
+    memset(&m->defers[i], sizeof(m->defers[i]), 0);
+    if (i == m->defers_len - 1)
+        m->defers_len--;
+}
 
 pa_mainloop *pa_mainloop_new(void)
 {
@@ -51,6 +77,10 @@ pa_mainloop *pa_mainloop_new(void)
 
 void pa_mainloop_free(pa_mainloop* m)
 {
+    for (size_t i = 0; i < m->defers_len; ++i) {
+        destroy_defer(m, i);
+    }
+    pa_xfree(m->defers);
     pa_xfree(m);
 }
 
@@ -86,6 +116,7 @@ static void pap_poll_defer_set_destroy(pa_defer_event *e, pa_defer_event_destroy
 static void pap_poll_quit(pa_mainloop_api*a, int retval)
 { PAP_POLL_DEFAULT_VOID(); }
 
+// FIXME: store this inside mainloop struct and don't allocate anew
 pa_mainloop_api* pa_mainloop_get_api(pa_mainloop*m)
 {
     pa_mainloop_api* ret = pa_xmalloc0(sizeof(pa_mainloop_api));
