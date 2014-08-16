@@ -23,12 +23,27 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <stdio.h>
 
+struct pending_action_data {
+    pa_context* context;
+    enum action {
+        NO_ACTION,
+        START_CONNECTING,
+        FINISH_CONNECTING
+    } action;
+};
+
 struct pa_context {
     unsigned use_count;
+    pa_context_state_t state;
     int last_errno;
+    pa_mainloop_api* loop;
+    pa_defer_event* pending_action_event;
+    struct pending_action_data pending_action_data;
     pa_context_notify_cb_t state_cb;
     void* state_cb_data;
 };
+
+static void pending_action_cb(pa_mainloop_api*a, pa_defer_event* e, void *userdata);
 
 pa_context *pa_context_new_with_proplist(pa_mainloop_api *mainloop, const char *name, pa_proplist *proplist)
 {
@@ -37,12 +52,22 @@ pa_context *pa_context_new_with_proplist(pa_mainloop_api *mainloop, const char *
     pa_xfree(prop_string);
     pa_context* ret = pa_xmalloc0(sizeof(pa_context));
     ret->use_count = 1;
+    ret->state = PA_CONTEXT_UNCONNECTED;
+    ret->loop = mainloop;
+    
+    ret->pending_action_data.context = ret;
+    ret->pending_action_data.action = NO_ACTION;
+    ret->pending_action_event = mainloop->defer_new(mainloop, &pending_action_cb, &ret->pending_action_data);
+    mainloop->defer_enable(ret->pending_action_event, 0);
+
+    return ret;
 }
 
 void pa_context_unref(pa_context *c)
 {
     --c->use_count;
     if (c->use_count == 0) {
+        c->loop->defer_free(c->pending_action_event);
         pa_xfree(c);
     }
 }
@@ -58,8 +83,44 @@ void pa_context_set_state_callback(pa_context *c, pa_context_notify_cb_t cb, voi
     c->state_cb_data = cb;
 }
 
+static void set_state(pa_context* c, pa_context_state_t state)
+{
+    c->state = state;
+    if (c->state_cb)
+        c->state_cb(c, c->state_cb_data);
+}
+
+pa_context_state_t pa_context_get_state(pa_context *c)
+{
+    return c->state;
+}
+
+void pending_action_cb(pa_mainloop_api*a, pa_defer_event* e, void *userdata)
+{
+    struct pending_action_data* data = (struct pending_action_data*)userdata;
+
+    pa_context* c = data->context;
+    switch (data->action) {
+    case NO_ACTION:
+        fprintf(stderr, "%s: no action is requested but event is not disabled\n", __func__);
+        c->loop->defer_enable(e, 0);
+        break;
+    case START_CONNECTING:
+        set_state(c, PA_CONTEXT_CONNECTING);
+        data->action = FINISH_CONNECTING;
+        break;
+    case FINISH_CONNECTING:
+        set_state(c, PA_CONTEXT_READY);
+        data->action = NO_ACTION;
+        c->loop->defer_enable(e, 0);
+        break;
+    }
+}
+
 int pa_context_connect(pa_context *c, const char *server, pa_context_flags_t flags, const pa_spawn_api *api)
 {
     fprintf(stderr, "%s: server = %s\n", __func__, server);
+    c->pending_action_data.action = START_CONNECTING;
+    c->loop->defer_enable(c->pending_action_event, 1);
     return 0;
 }
