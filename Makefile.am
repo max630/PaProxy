@@ -16,7 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 lib_LTLIBRARIES = libpulse.la
-check_PROGRAMS = t_proplist
+check_PROGRAMS = t_proplist t_mainloop
 
 AM_CFLAGS = -Wimplicit -Werror -g --std=gnu99
 AM_CPPFLAGS = -D_GNU_SOURCE
@@ -29,6 +29,9 @@ libpulse_la_SOURCES = $(libpulse_impl_sources) defaults.c default_macros.c
 libpulse_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-version-script=map-libpulse
 
 t_proplist_SOURCES = t_proplist.c
+t_proplist_LDADD = -lpulse
+
+t_proplist_SOURCES = t_mainloop.c
 t_proplist_LDADD = -lpulse
 
 ACLOCAL_AMFLAGS = -I m4
