@@ -23,9 +23,24 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <stdio.h>
 
+#define CB_FIELDS(cb_type, cb_name) \
+    cb_type cb_name; \
+    void* cb_name ## _data;
+
 struct pa_stream {
     int count;
     pa_context* context;
+
+    CB_FIELDS(pa_stream_notify_cb_t, state_cb)
+    CB_FIELDS(pa_stream_request_cb_t, read_cb)
+    CB_FIELDS(pa_stream_request_cb_t, write_cb)
+    CB_FIELDS(pa_stream_notify_cb_t, suspended_cb)
+    CB_FIELDS(pa_stream_notify_cb_t, moved_cb)
+    CB_FIELDS(pa_stream_notify_cb_t, underflow_cb)
+    CB_FIELDS(pa_stream_notify_cb_t, overflow_cb)
+    CB_FIELDS(pa_stream_notify_cb_t, started_cb)
+    CB_FIELDS(pa_stream_event_cb_t, event_cb)
+    CB_FIELDS(pa_stream_notify_cb_t, buffer_attr_cb)
 };
 
 pa_stream* pa_stream_new_with_proplist(
@@ -56,3 +71,21 @@ void pa_stream_unref(pa_stream* s)
         pa_xfree(s);
     }
 }
+
+#define CB_DEFINE(cb_type, stem) \
+void pa_stream_set_ ## stem ## _callback(pa_stream *p, cb_type cb, void *userdata) \
+{ \
+    p->stem ## _cb = cb; \
+    p->stem ## _cb_data = userdata; \
+}
+
+CB_DEFINE(pa_stream_notify_cb_t, state)
+CB_DEFINE(pa_stream_request_cb_t, read)
+CB_DEFINE(pa_stream_request_cb_t, write)
+CB_DEFINE(pa_stream_notify_cb_t, suspended)
+CB_DEFINE(pa_stream_notify_cb_t, moved)
+CB_DEFINE(pa_stream_notify_cb_t, underflow)
+CB_DEFINE(pa_stream_notify_cb_t, overflow)
+CB_DEFINE(pa_stream_notify_cb_t, started)
+CB_DEFINE(pa_stream_event_cb_t, event)
+CB_DEFINE(pa_stream_notify_cb_t, buffer_attr)
