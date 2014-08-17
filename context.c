@@ -23,13 +23,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <stdio.h>
 
+#include "internals.h"
+
 struct pending_action_data {
     pa_context* context;
-    enum action {
-        NO_ACTION,
-        START_CONNECTING,
-        FINISH_CONNECTING
-    } action;
+    enum pending_action_type action;
+    pa_stream* stream;
 };
 
 struct pa_context {
@@ -126,7 +125,17 @@ void pending_action_cb(pa_mainloop_api*a, pa_defer_event* e, void *userdata)
 int pa_context_connect(pa_context *c, const char *server, pa_context_flags_t flags, const pa_spawn_api *api)
 {
     fprintf(stderr, "%s: server = %s\n", __func__, server);
-    c->pending_action_data.action = START_CONNECTING;
-    c->loop->defer_enable(c->pending_action_event, 1);
+    pending_action_request(c, START_CONNECTING, NULL);
     return 0;
+}
+
+void pending_action_request(pa_context* c, enum pending_action_type action_type, pa_stream* s)
+{
+    if (c->pending_action_data.action != NO_ACTION) {
+        fprintf(stderr, "%s: pending action clash!!!\n", __func__);
+        return;
+    }
+    c->pending_action_data.action = action_type;
+    c->pending_action_data.stream = s;
+    c->loop->defer_enable(c->pending_action_event, 1);
 }
