@@ -113,3 +113,13 @@ void stream_set_state(pa_stream* s, pa_stream_state_t state)
     if (s->state_cb)
         s->state_cb(s, s->state_cb_data);
 }
+
+pa_stream_state_t pa_stream_get_state(pa_stream *p)
+{
+    return p->state;
+}
+
+pa_context* pa_stream_get_context(pa_stream *p)
+{
+    return p->context;
+}
