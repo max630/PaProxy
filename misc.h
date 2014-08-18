@@ -27,3 +27,5 @@ char* pap_strcat(char* str1, const char* str2);
     assert((str)); \
     (str_size) = new_allocated; \
 } while (0)
+
+const char* pap_format_name(int format);

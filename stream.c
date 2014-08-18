@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdio.h>
 
 #include "internals.h"
+#include "misc.h"
 
 #define CB_FIELDS(cb_type, cb_name) \
     cb_type cb_name; \
@@ -55,7 +56,12 @@ pa_stream* pa_stream_new_with_proplist(
         pa_proplist *p                    /**< The initial property list */)
 {
     char* props = pa_proplist_to_string(p);
-    fprintf(stderr, "%s: name = %s, proplist = %s\n", __func__, name, props);
+    fprintf(stderr, "%s: name = %s\n", __func__, name);
+    if (ss)
+        fprintf(stderr, " > sample = {%s, %u, %u}\n", pap_format_name(ss->format), (unsigned)ss->rate, (unsigned)ss->channels);
+    if (map)
+        fprintf(stderr, " > channels = %u\n", (unsigned)map->channels);
+    fprintf(stderr, " > proplist = %s\n", props);
     pa_xfree(props);
 
     pa_stream* ret = pa_xmalloc0(sizeof(pa_stream));
