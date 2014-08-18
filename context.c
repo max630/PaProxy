@@ -111,13 +111,22 @@ void pending_action_cb(pa_mainloop_api*a, pa_defer_event* e, void *userdata)
         c->loop->defer_enable(e, 0);
         break;
     case START_CONNECTING:
-        set_state(c, PA_CONTEXT_CONNECTING);
         data->action = FINISH_CONNECTING;
+        set_state(c, PA_CONTEXT_CONNECTING);
         break;
     case FINISH_CONNECTING:
-        set_state(c, PA_CONTEXT_READY);
         data->action = NO_ACTION;
         c->loop->defer_enable(e, 0);
+        set_state(c, PA_CONTEXT_READY);
+        break;
+    case STREAM_START_CONNECTING:
+        data->action = STREAM_FINISH_CONNECTING;
+        stream_set_state(data->stream, PA_STREAM_CREATING);
+        break;
+    case STREAM_FINISH_CONNECTING:
+        data->action = NO_ACTION;
+        c->loop->defer_enable(e, 0);
+        stream_set_state(data->stream, PA_STREAM_READY);
         break;
     }
 }

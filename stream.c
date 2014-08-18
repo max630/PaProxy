@@ -23,6 +23,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <stdio.h>
 
+#include "internals.h"
+
 #define CB_FIELDS(cb_type, cb_name) \
     cb_type cb_name; \
     void* cb_name ## _data;
@@ -30,6 +32,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 struct pa_stream {
     int count;
     pa_context* context;
+
+    pa_stream_state_t state;
 
     CB_FIELDS(pa_stream_notify_cb_t, state_cb)
     CB_FIELDS(pa_stream_request_cb_t, read_cb)
@@ -89,3 +93,23 @@ CB_DEFINE(pa_stream_notify_cb_t, overflow)
 CB_DEFINE(pa_stream_notify_cb_t, started)
 CB_DEFINE(pa_stream_event_cb_t, event)
 CB_DEFINE(pa_stream_notify_cb_t, buffer_attr)
+
+int pa_stream_connect_playback(
+        pa_stream *s                  /**< The stream to connect to a sink */,
+        const char *dev               /**< Name of the sink to connect to, or NULL for default */ ,
+        const pa_buffer_attr *attr    /**< Buffering attributes, or NULL for default */,
+        pa_stream_flags_t flags       /**< Additional flags, or 0 for default */,
+        const pa_cvolume *volume      /**< Initial volume, or NULL for default */,
+        pa_stream *sync_stream        /**< Synchronize this stream with the specified one, or NULL for a standalone stream */)
+{
+    fprintf(stderr, "%s: dev = %s, flags = %x\n", __func__, dev, (int)flags);
+    pending_action_request(s->context, STREAM_START_CONNECTING, s);
+    return 0;
+}
+
+void stream_set_state(pa_stream* s, pa_stream_state_t state)
+{
+    s->state = state;
+    if (s->state_cb)
+        s->state_cb(s, s->state_cb_data);
+}
