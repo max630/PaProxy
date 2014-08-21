@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string.h>
 
 #include "default_macros.h"
+#include "int_mainloop.h"
 #include "misc.h"
 
 #define PAP_POLL_DEFAULT_NULL() \
@@ -54,6 +55,14 @@ struct defer_data {
     pa_defer_event* event;
 };
 
+struct pap_desc_handler
+{
+    int (*fds_len_cb)(unsigned int* fds_len, void* userdata);
+    int (*prepare_fds_cb)(struct pollfd* fds, unsigned int fds_len, void* userdata);
+    int (*handle_cb)(int* is_consumed, struct pollfd* fds, unsigned int fds_len, void* userdata);
+    void* userdata;
+}
+
 struct pa_mainloop {
     int last_errno;
     int stopped;
@@ -62,6 +71,8 @@ struct pa_mainloop {
     size_t defers_len;
     size_t defers_size;
     pa_mainloop_api api;
+
+    pap_desc_handler* desc_handlers;
 };
 
 static void destroy_defer(pa_mainloop* m, size_t i)
@@ -82,6 +93,7 @@ void pa_mainloop_free(pa_mainloop* m)
         destroy_defer(m, i);
     }
     pa_xfree(m->defers);
+    pa_xfree(m->desc_handlers);
     pa_xfree(m);
 }
 
@@ -197,8 +209,28 @@ int pa_mainloop_run(pa_mainloop *m, int *retval)
                 m->defers[i].cb(&m->api, m->defers[i].event, m->defers[i].userdata);
             }
         }
+
     }
 
     if (retval)
         *retval = m->retval;
+}
+
+int pap_mainloop_new_desc_handler(
+        pa_mainloop_api* api,
+        pap_desc_handler** handler,
+        int (*fds_len_cb)(unsigned int* fds_len, void* userdata),
+        int (*prepare_fds_cb)(struct pollfd* fds, unsigned int fds_len, void* userdata),
+        int (*handle_cb)(int* is_consumed, struct pollfd* fds, unsigned int fds_len, void* userdata),
+        void* userdata);
+{
+    if (a->io_new != &pap_poll_io_enable) {
+        fprintf(stderr, "Pa Proxy: descriptor handler requested for unsupported mainloop\n");
+        return -PA_ERR_NOTIMPLEMENTED;
+    }
+    pa_mainloop* m = mainloop(a);
+    // TODO: finalize
+    if (m->desc_handlers != NULL) {
+        // error - only 1 slot so far
+    }
 }
