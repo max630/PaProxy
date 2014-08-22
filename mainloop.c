@@ -268,12 +268,12 @@ int pap_mainloop_new_desc_handler(
 {
     if (api->io_new != &pap_poll_io_new) {
         fprintf(stderr, "Pa Proxy: %s: descriptor handler requested for unsupported mainloop\n", __func__);
-        return -PA_ERR_NOTIMPLEMENTED;
+        return -PA_ERR_NOTSUPPORTED;
     }
     pa_mainloop* m = mainloop(api);
     if (m->desc_handlers != NULL) {
         fprintf(stderr, "Pa Proxy: %s: only one descriptor handler is impleented so far\n", __func__);
-        return -PA_ERR_NOTIMPLEMENTED;
+        return -PA_ERR_NOTSUPPORTED;
     }
     m->desc_handlers = pa_xmalloc0(sizeof(*m->desc_handlers));
     m->desc_handlers->fds_len_cb = fds_len_cb;
