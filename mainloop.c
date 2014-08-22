@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <pulse/mainloop-api.h>
 #include <pulse/xmalloc.h>
 
+#include <stdio.h>
 #include <string.h>
 
 #include "default_macros.h"
@@ -57,11 +58,12 @@ struct defer_data {
 
 struct pap_desc_handler
 {
+    pa_mainloop* loop;
     int (*fds_len_cb)(unsigned int* fds_len, void* userdata);
     int (*prepare_fds_cb)(struct pollfd* fds, unsigned int fds_len, void* userdata);
     int (*handle_cb)(int* is_consumed, struct pollfd* fds, unsigned int fds_len, void* userdata);
     void* userdata;
-}
+};
 
 struct pa_mainloop {
     int last_errno;
@@ -222,15 +224,30 @@ int pap_mainloop_new_desc_handler(
         int (*fds_len_cb)(unsigned int* fds_len, void* userdata),
         int (*prepare_fds_cb)(struct pollfd* fds, unsigned int fds_len, void* userdata),
         int (*handle_cb)(int* is_consumed, struct pollfd* fds, unsigned int fds_len, void* userdata),
-        void* userdata);
+        void* userdata)
 {
-    if (a->io_new != &pap_poll_io_enable) {
-        fprintf(stderr, "Pa Proxy: descriptor handler requested for unsupported mainloop\n");
+    if (api->io_new != &pap_poll_io_new) {
+        fprintf(stderr, "Pa Proxy: %s: descriptor handler requested for unsupported mainloop\n", __func__);
         return -PA_ERR_NOTIMPLEMENTED;
     }
-    pa_mainloop* m = mainloop(a);
-    // TODO: finalize
+    pa_mainloop* m = mainloop(api);
     if (m->desc_handlers != NULL) {
-        // error - only 1 slot so far
+        fprintf(stderr, "Pa Proxy: %s: only one descriptor handler is impleented so far\n", __func__);
+        return -PA_ERR_NOTIMPLEMENTED;
     }
+    m->desc_handlers = pa_xmalloc0(sizeof(*m->desc_handlers));
+    m->desc_handlers->fds_len_cb = fds_len_cb;
+    m->desc_handlers->loop = m;
+    m->desc_handlers->prepare_fds_cb = prepare_fds_cb;
+    m->desc_handlers->handle_cb = handle_cb;
+    m->desc_handlers->userdata = userdata;
+    *handler = m->desc_handlers;
+    return 0;
+}
+
+void pap_mainloop_free_desc_handler(pap_desc_handler* handler)
+{
+    pa_mainloop* m = handler->loop;
+    pa_xfree(m->desc_handlers);
+    m->desc_handlers = NULL;
 }
