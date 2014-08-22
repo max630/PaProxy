@@ -18,10 +18,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <pulse/def.h>
+#include <pulse/error.h>
 #include <pulse/mainloop.h>
 #include <pulse/mainloop-api.h>
 #include <pulse/xmalloc.h>
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -211,7 +213,45 @@ int pa_mainloop_run(pa_mainloop *m, int *retval)
                 m->defers[i].cb(&m->api, m->defers[i].event, m->defers[i].userdata);
             }
         }
+        
+        if (m->desc_handlers) {
+            unsigned int fds_len = 0;
+            int pa_ret;
+            if ((pa_ret = m->desc_handlers->fds_len_cb(&fds_len, m->desc_handlers->userdata)) != 0) {
+                fprintf(stderr, "Pa Proxy: %s: fds_len_cb failed: %s\n", __func__, pa_strerror(pa_ret));
+                goto desc_handlers_err;
+            }
 
+            struct pollfd* fds = pa_xmalloc0(sizeof(struct pollfd*) * fds_len);
+            if (!fds) {
+                fprintf(stderr, "Pa Proxy: %s: allocate fds failed\n", __func__);
+                goto desc_handlers_err;
+            }
+
+            if ((pa_ret = m->desc_handlers->prepare_fds_cb(fds, fds_len, m->desc_handlers->userdata)) != 0) {
+                fprintf(stderr, "Pa Proxy: %s: prepare_fds_cb failed: %s\n", __func__, pa_strerror(pa_ret));
+                pa_xfree(fds);
+                goto desc_handlers_err;
+            }
+
+            switch (poll(fds, fds_len, -1)) {
+            case 0:
+                break;
+            case -1:
+                fprintf(stderr, "Pa Proxy: %s: poll failed: %s\n", __func__, strerror(errno));
+                break;
+            default:
+                {
+                    int is_consumed = 0;
+                    if ((pa_ret = m->desc_handlers->handle_cb(&is_consumed, fds, fds_len, m->desc_handlers->userdata)) != 0)
+                        fprintf(stderr, "Pa Proxy: %s: handle_cb failed: %s\n", __func__, pa_strerror(pa_ret));
+                }
+                break;
+            }
+            pa_xfree(fds);
+        }
+    desc_handlers_err:
+        ;
     }
 
     if (retval)
