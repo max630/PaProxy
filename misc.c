@@ -200,3 +200,23 @@ const char* pap_format_name(int format)
         return format_names[format];
     }
 }
+
+snd_pcm_format_t pcm_format_from_pa_format(pa_sample_format_t pa_format)
+{
+    switch (pa_format) {
+    case PA_SAMPLE_U8: return SND_PCM_FORMAT_U8;
+    case PA_SAMPLE_ALAW: return SND_PCM_FORMAT_A_LAW;
+    case PA_SAMPLE_ULAW: return SND_PCM_FORMAT_MU_LAW;
+    case PA_SAMPLE_S16LE: return SND_PCM_FORMAT_S16_LE;
+    case PA_SAMPLE_S16BE: return SND_PCM_FORMAT_S16_BE;
+    case PA_SAMPLE_FLOAT32LE: return SND_PCM_FORMAT_FLOAT_LE;
+    case PA_SAMPLE_FLOAT32BE: return SND_PCM_FORMAT_FLOAT_BE;
+    case PA_SAMPLE_S32LE: return SND_PCM_FORMAT_S32_LE;
+    case PA_SAMPLE_S32BE: return SND_PCM_FORMAT_S32_BE;
+    case PA_SAMPLE_S24LE: return SND_PCM_FORMAT_S24_LE;
+    case PA_SAMPLE_S24BE: return SND_PCM_FORMAT_S24_BE;
+    case PA_SAMPLE_S24_32LE: return SND_PCM_FORMAT_S24_3LE;
+    case PA_SAMPLE_S24_32BE: return SND_PCM_FORMAT_S24_3BE;
+    default: return SND_PCM_FORMAT_UNKNOWN;
+    }
+}

@@ -19,6 +19,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #pragma once
 
+#include <pulse/def.h>
+
+#include <alsa/asoundlib.h>
+
 char* pap_strcat(char* str1, const char* str2);
 
 #define PAP_GROW(str, str_size) do { \
@@ -29,3 +33,5 @@ char* pap_strcat(char* str1, const char* str2);
 } while (0)
 
 const char* pap_format_name(int format);
+
+snd_pcm_format_t pcm_format_from_pa_format(pa_sample_format_t pa_format);
