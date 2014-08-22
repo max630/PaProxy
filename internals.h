@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma once
 
 #include <pulse/context.h>
+#include <pulse/mainloop-api.h>
 #include <pulse/stream.h>
 
 enum pending_action_type {
@@ -31,5 +32,7 @@ enum pending_action_type {
 };
 
 void pending_action_request(pa_context* c, enum pending_action_type action_type, pa_stream* s);
+pa_mainloop_api* context_get_loop(pa_context* c);
 
 void stream_set_state(pa_stream* s, pa_stream_state_t state);
+void pap_stream_do_connect(pa_stream* s);

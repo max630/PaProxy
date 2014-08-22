@@ -18,11 +18,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <pulse/def.h>
+#include <pulse/error.h>
 #include <pulse/stream.h>
 #include <pulse/xmalloc.h>
 
+#include <alsa/asoundlib.h>
+
 #include <stdio.h>
 
+#include "int_mainloop.h"
 #include "internals.h"
 #include "misc.h"
 
@@ -34,7 +38,14 @@ struct pa_stream {
     int count;
     pa_context* context;
 
+    const pa_sample_spec* pa_ss;
+    snd_pcm_stream_t pcm_dir;
+
     pa_stream_state_t state;
+
+    snd_pcm_t* pcm;
+
+    pap_desc_handler* desc_handler;
 
     CB_FIELDS(pa_stream_notify_cb_t, state_cb)
     CB_FIELDS(pa_stream_request_cb_t, read_cb)
@@ -68,6 +79,7 @@ pa_stream* pa_stream_new_with_proplist(
 
     ret->count = 1;
     ret->context = c;
+    ret->pa_ss = ss;
     pa_context_ref(ret->context);
 
     return ret;
@@ -100,6 +112,22 @@ CB_DEFINE(pa_stream_notify_cb_t, started)
 CB_DEFINE(pa_stream_event_cb_t, event)
 CB_DEFINE(pa_stream_notify_cb_t, buffer_attr)
 
+static int fds_len_cb(unsigned int* fds_len, void* userdata)
+{
+    pa_stream* s = userdata;
+
+}
+
+static int prepare_fds_cb(struct pollfd* fds, unsigned int fds_len, void* userdata)
+{
+    pa_stream* s = userdata;
+}
+
+static int handle_cb(int* is_consumed, struct pollfd* fds, unsigned int fds_len, void* userdata)
+{
+    pa_stream* s = userdata;
+}
+
 int pa_stream_connect_playback(
         pa_stream *s                  /**< The stream to connect to a sink */,
         const char *dev               /**< Name of the sink to connect to, or NULL for default */ ,
@@ -110,6 +138,7 @@ int pa_stream_connect_playback(
 {
     fprintf(stderr, "%s: dev = %s, flags = %x\n", __func__, dev, (int)flags);
     pending_action_request(s->context, STREAM_START_CONNECTING, s);
+
     return 0;
 }
 
@@ -128,4 +157,57 @@ pa_stream_state_t pa_stream_get_state(pa_stream *p)
 pa_context* pa_stream_get_context(pa_stream *p)
 {
     return p->context;
+}
+
+void pap_stream_do_connect(pa_stream* s)
+{
+    stream_set_state(s, PA_STREAM_CREATING);
+
+    // TODO: setup write handler
+
+    if (!s->desc_handler) {
+        int pap_ret;
+        if ((pap_ret = pap_mainloop_new_desc_handler(context_get_loop(s->context),
+                                                     &s->desc_handler,
+                                                     &fds_len_cb,
+                                                     &prepare_fds_cb,
+                                                     &handle_cb,
+                                                     s)) != PA_OK) {
+            fprintf(stderr, "%s: pap_mainloop_new_desc_handler failed: %s\n", __func__, pa_strerror(pap_ret));
+            stream_set_state(s, PA_STREAM_FAILED);
+            return;
+        }
+    }
+
+    int pcm_ret;
+    if ((pcm_ret = snd_pcm_open(&s->pcm, NULL, s->pcm_dir, SND_PCM_NONBLOCK)) != 0) {
+        fprintf(stderr, "%s: snd_pcm_open failed: %s\n", __func__, snd_strerror(pcm_ret));
+        stream_set_state(s, PA_STREAM_FAILED);
+        return;
+    }
+
+    if (snd_pcm_state(s->pcm) != SND_PCM_STATE_OPEN) {
+        fprintf(stderr, "%s: open unexpected PCM state: %d, need OPEN\n", __func__, (int)snd_pcm_state(s->pcm));
+        stream_set_state(s, PA_STREAM_FAILED);
+        return;
+    }
+
+    if ((pcm_ret = snd_pcm_set_params(s->pcm, pcm_format_from_pa_format(s->pa_ss->format),
+                                      SND_PCM_ACCESS_RW_INTERLEAVED, // TODO: pick proper value from pa parameters
+                                      s->pa_ss->channels,
+                                      s->pa_ss->rate,
+                                      1, 500000)) != 0) // TODO: pick proper latency from pa parameters
+    {
+        fprintf(stderr, "%s: snd_pcm_set_params failed: %s\n", __func__, snd_strerror(pcm_ret));
+        stream_set_state(s, PA_STREAM_FAILED);
+        return;
+    }
+
+    if (snd_pcm_state(s->pcm) != SND_PCM_STATE_RUNNING) {
+        fprintf(stderr, "%s: open unexpected PCM state: %d, need OPEN\n", __func__, (int)snd_pcm_state(s->pcm));
+        stream_set_state(s, PA_STREAM_FAILED);
+        return;
+    }
+
+    stream_set_state(s, PA_STREAM_READY);
 }
