@@ -29,5 +29,7 @@ AC_ARG_ENABLE([makedefaults], [  --enable-makedefaults Add rule for generating d
 esac], [makedefaults=false])
 AM_CONDITIONAL([ENABLE_MAKEDEFAULTS], [test x$makedefaults = xtrue])
 
+AM_PATH_ALSA
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

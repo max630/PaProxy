@@ -122,7 +122,6 @@ void pending_action_cb(pa_mainloop_api*a, pa_defer_event* e, void *userdata)
     case STREAM_START_CONNECTING:
         data->action = NO_ACTION;
         c->loop->defer_enable(e, 0);
-        set_state(c, PA_CONTEXT_READY);
         pap_stream_do_connect(data->stream);
         break;
     }
@@ -144,4 +143,9 @@ void pending_action_request(pa_context* c, enum pending_action_type action_type,
     c->pending_action_data.action = action_type;
     c->pending_action_data.stream = s;
     c->loop->defer_enable(c->pending_action_event, 1);
+}
+
+pa_mainloop_api* context_get_loop(pa_context* c)
+{
+    return c->loop;
 }

@@ -180,7 +180,7 @@ void pap_stream_do_connect(pa_stream* s)
     }
 
     int pcm_ret;
-    if ((pcm_ret = snd_pcm_open(&s->pcm, NULL, s->pcm_dir, SND_PCM_NONBLOCK)) != 0) {
+    if ((pcm_ret = snd_pcm_open(&s->pcm, "null", s->pcm_dir, SND_PCM_NONBLOCK)) != 0) {
         fprintf(stderr, "%s: snd_pcm_open failed: %s\n", __func__, snd_strerror(pcm_ret));
         stream_set_state(s, PA_STREAM_FAILED);
         return;
@@ -203,8 +203,21 @@ void pap_stream_do_connect(pa_stream* s)
         return;
     }
 
+    if (snd_pcm_state(s->pcm) != SND_PCM_STATE_PREPARED) {
+        fprintf(stderr, "%s: open unexpected PCM state: %d, need PREPARED\n", __func__, (int)snd_pcm_state(s->pcm));
+        stream_set_state(s, PA_STREAM_FAILED);
+        return;
+    }
+
+    if ((pcm_ret = snd_pcm_start(s->pcm)) != 0)
+    {
+        fprintf(stderr, "%s: snd_pcm_open failed: %s\n", __func__, snd_strerror(pcm_ret));
+        stream_set_state(s, PA_STREAM_FAILED);
+        return;
+    }
+
     if (snd_pcm_state(s->pcm) != SND_PCM_STATE_RUNNING) {
-        fprintf(stderr, "%s: open unexpected PCM state: %d, need OPEN\n", __func__, (int)snd_pcm_state(s->pcm));
+        fprintf(stderr, "%s: open unexpected PCM state: %d, need RUNNING\n", __func__, (int)snd_pcm_state(s->pcm));
         stream_set_state(s, PA_STREAM_FAILED);
         return;
     }

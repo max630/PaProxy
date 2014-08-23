@@ -26,6 +26,7 @@ libpulse_impl_sources = misc.c channels.c proplist.c sample.c xmalloc.c \
 			defaults-specials.c
 
 libpulse_la_SOURCES = $(libpulse_impl_sources) defaults.c default_macros.c
+libpulse_LDADD = $(AM_LDADD) -lasound
 libpulse_la_LDFLAGS = $(AM_LDFLAGS) -Wl,-version-script=map-libpulse
 
 t_proplist_SOURCES = t_proplist.c
